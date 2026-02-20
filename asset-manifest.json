@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/eternal-infinite-void/static/css/main.f4b9e4c3.css",
-    "main.js": "/eternal-infinite-void/static/js/main.5b0843c3.js",
+    "main.css": "/eternal-infinite-void/static/css/main.2e180508.css",
+    "main.js": "/eternal-infinite-void/static/js/main.5bfc5ee1.js",
     "static/js/453.fd2f0c4a.chunk.js": "/eternal-infinite-void/static/js/453.fd2f0c4a.chunk.js",
     "index.html": "/eternal-infinite-void/index.html",
-    "main.f4b9e4c3.css.map": "/eternal-infinite-void/static/css/main.f4b9e4c3.css.map",
-    "main.5b0843c3.js.map": "/eternal-infinite-void/static/js/main.5b0843c3.js.map",
+    "main.2e180508.css.map": "/eternal-infinite-void/static/css/main.2e180508.css.map",
+    "main.5bfc5ee1.js.map": "/eternal-infinite-void/static/js/main.5bfc5ee1.js.map",
     "453.fd2f0c4a.chunk.js.map": "/eternal-infinite-void/static/js/453.fd2f0c4a.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.f4b9e4c3.css",
-    "static/js/main.5b0843c3.js"
+    "static/css/main.2e180508.css",
+    "static/js/main.5bfc5ee1.js"
   ]
 }
