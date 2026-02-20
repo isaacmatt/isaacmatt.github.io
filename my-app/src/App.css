@@ -317,6 +317,26 @@ h2 {
   opacity: 1;
 }
 
+.site-attribution {
+  margin-top: 22px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(172, 184, 206, 0.25);
+  color: #b8c3d6;
+  font-size: 0.9rem;
+}
+
+.site-attribution p {
+  margin: 0;
+}
+
+.site-attribution a {
+  color: #cfb2ff;
+}
+
+.site-attribution a:hover {
+  color: #ecd9ff;
+}
+
 @media (max-width: 768px) {
   .App {
     min-height: 100vh;

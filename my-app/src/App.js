@@ -236,6 +236,14 @@ function App() {
           ))}
         </div>
       </section>
+      <footer className="site-attribution" aria-label="Icon attribution">
+        <p>
+          Icon attribution:{' '}
+          <a href="https://www.flaticon.com/free-icons/space" title="space icons" target="_blank" rel="noreferrer">
+            Space icons created by Freepik - Flaticon
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
