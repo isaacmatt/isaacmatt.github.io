@@ -13,6 +13,11 @@ function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [isBoosted, setIsBoosted] = useState(false);
   const [spinRate, setSpinRate] = useState(1);
+  const [expandedIndex, setExpandedIndex] = useState(null);
+
+  const toggleExpand = (index) => {
+    setExpandedIndex(prev => prev === index ? null : index);
+  };
   const boostTimeoutRef = useRef(null);
   const videoRef = useRef(null);
   const ringARef = useRef(null);
@@ -29,33 +34,51 @@ function App() {
   };
   const workItems = [
     {
-      title: 'TestWebPage Alpha — Frontend Architecture & Deployment Sandbox',
+      title: 'TestWebPage Alpha',
+      subtitle: 'Frontend Architecture & Deployment Sandbox',
       details: 'An experimental web development environment used to prototype layout systems, deployment workflows, and responsive UI components. Built to test Git-based version control, static hosting configurations, and frontend performance considerations. Serves as a sandbox for iterative design and infrastructure experimentation.',
+      tags: ['React', 'GitHub Pages', 'Responsive UI'],
+      category: 'web',
       repoUrl: 'https://github.com/isaacmatt/TestWebPage_Alpha',
     },
     {
-      title: 'AI-Driven Municipal Issue Routing System (IBM watsonx Hackathon)',
-      details: ' An end-to-end workflow platform where residents submit infrastructure issues (e.g., road damage) via image and text input. The system integrates classification logic, prioritization workflows, and routing mechanisms for human review and work order generation.Designed with agentic orchestration principles, enabling structured intake, data extraction, automated triage, and integration with downstream approval systems. Focused on scalable decision pipelines and structured information flow.',
+      title: 'AI Municipal Issue Router',
+      subtitle: 'IBM watsonx Hackathon',
+      details: 'An end-to-end workflow platform where residents submit infrastructure issues (e.g., road damage) via image and text input. Integrates classification logic, prioritization workflows, and routing mechanisms for human review and work order generation. Designed with agentic orchestration principles for structured intake, automated triage, and downstream approval integration.',
+      tags: ['AI', 'IBM watsonx', 'Python', 'Agentic'],
+      category: 'ai',
       repoUrl: 'https://github.com/isaacmatt/IBM_watsonx-Hackathon-Orchestrate',
     },
     {
-      title: 'Modular Motor Control Framework (C++ Embedded Systems)',
-      details: 'A modular C++ control framework for managing 12V worm gear motors using Arduino-based microcontrollers. Implements object-oriented abstractions for motor control, position tracking, and structured command execution. Designed to support scalable integration of encoders, PWM control, and multi-mode operation while maintaining clean separation between hardware drivers and control logic.',
+      title: 'Modular Motor Control Framework',
+      subtitle: 'C++ Embedded Systems',
+      details: 'A modular C++ control framework for managing 12V worm gear motors using Arduino-based microcontrollers. Implements object-oriented abstractions for motor control, position tracking, and structured command execution. Supports scalable integration of encoders, PWM control, and multi-mode operation with clean hardware/logic separation.',
+      tags: ['C++', 'Arduino', 'Embedded', 'OOP'],
+      category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/MotorCode',
     },
-        {
-      title: 'Wireless + I2C Hybrid Communication System',
-      details: 'A dual-layer communication architecture combining wireless transmission with I2C-based device coordination for remote controller systems. Designed to ensure reliable data transfer between distributed microcontrollers while managing timing constraints and structured message handling. Explores layered communication design, protocol abstraction, and modular integration patterns.',
+    {
+      title: 'Wireless + I2C Hybrid Comms',
+      subtitle: 'Distributed Microcontroller Architecture',
+      details: 'A dual-layer communication architecture combining wireless transmission with I2C-based device coordination for remote controller systems. Ensures reliable data transfer between distributed microcontrollers while managing timing constraints and structured message handling.',
+      tags: ['C++', 'I2C', 'Wireless', 'Embedded'],
+      category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/Micro_Comms',
     },
-        {
-      title: 'Machine Learning-Based Pothole Detection System',
-      details: 'A full-stack computer vision pipeline for detecting road damage using drone-captured imagery. Built using Python, OpenCV, and PyTorch (YOLO-based models). Includes dataset preprocessing, augmentation workflows, model training and evaluation, and performance benchmarking under edge-compute constraints (Raspberry Pi-class hardware). Achieved >90% detection accuracy through iterative dataset refinement and hyperparameter tuning.',
+    {
+      title: 'ML Pothole Detection System',
+      subtitle: 'Computer Vision · Capstone Project',
+      details: 'A full-stack computer vision pipeline for detecting road damage using drone-captured imagery. Built using Python, OpenCV, and PyTorch (YOLO-based models). Includes dataset preprocessing, augmentation workflows, model training, and performance benchmarking under edge-compute constraints. Achieved >90% detection accuracy through iterative refinement.',
+      tags: ['Python', 'PyTorch', 'YOLO', 'OpenCV'],
+      category: 'ml',
       repoUrl: 'https://github.com/isaacmatt/2025ECE_CapstoneG12',
     },
-        {
+    {
       title: 'Creative Systems Portfolio',
+      subtitle: 'Experimental & Generative Design',
       details: 'A curated portfolio showcasing experimental and creative technical work, blending software engineering with visual and conceptual design. Highlights exploratory projects focused on simulation, generative design, and performance-conscious rendering.',
+      tags: ['React', 'Creative', 'Generative'],
+      category: 'creative',
       repoUrl: 'https://github.com/isaacmatt/eternal-infinite-void',
     },
   ];
@@ -225,15 +248,56 @@ function App() {
       <section ref={workRef} className="work-table-section" aria-label="Work highlights">
         <h3>Work Highlights</h3>
         <div className="work-list">
-          {workItems.map((item) => (
-            <article key={item.title} className="work-item">
-              <h4>{item.title}</h4>
-              <p>{item.details}</p>
-              <a href={item.repoUrl} target="_blank" rel="noreferrer">
-                View Repository
-              </a>
-            </article>
-          ))}
+          {workItems.map((item, index) => {
+            const isExpanded = expandedIndex === index;
+            return (
+              <article
+                key={item.title}
+                className={`work-item${isExpanded ? ' work-item-expanded' : ''}`}
+                data-category={item.category}
+                style={{ animationDelay: `${index * 75}ms` }}
+              >
+                <div
+                  className="work-item-header"
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
+                  onClick={() => toggleExpand(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(index); }
+                  }}
+                >
+                  <div className="work-item-meta">
+                    <span className="work-item-category">{item.category}</span>
+                    <h4>{item.title}</h4>
+                    <span className="work-item-subtitle">{item.subtitle}</span>
+                  </div>
+                  <div className="work-item-right">
+                    <div className="work-item-tags">
+                      {item.tags.map(tag => (
+                        <span key={tag} className="work-tag">{tag}</span>
+                      ))}
+                    </div>
+                    <span className="work-item-toggle" aria-hidden="true">{isExpanded ? '−' : '+'}</span>
+                  </div>
+                </div>
+                <div className={`work-item-body${isExpanded ? ' expanded' : ''}`}>
+                  <div>
+                    <p>{item.details}</p>
+                    <a
+                      href={item.repoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="work-repo-btn"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      View Repository
+                    </a>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
       <footer className="site-attribution" aria-label="Icon attribution">
