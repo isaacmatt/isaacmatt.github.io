@@ -1,70 +1,60 @@
-# Getting Started with Create React App
+# Eternal Infinite Void Portfolio
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is a JavaScript portfolio app built with React. It presents a personal engineering portfolio with an interactive black hole intro, animated particle background, smooth section navigation, and expandable project cards for web, AI, machine learning, embedded systems, PCB design, and creative technical work.
+
+The app was developed as a collaborative frontend project, combining hands-on JavaScript and React implementation with AI-assisted design and iteration, including collaboration with Claude for UI ideas, copy refinement, and interactive behavior planning.
+
+## Features
+
+- React-based single page portfolio interface
+- Interactive black hole animation with hover, click, keyboard, and video playback effects
+- Canvas particle field that responds to pointer movement
+- Smooth navigation between intro and work sections
+- Expandable work highlight cards with tags, categories, and repository links
+- Responsive styling for desktop and mobile layouts
+- GitHub Pages deployment setup
+
+## Tech Stack
+
+- JavaScript
+- React
+- CSS
+- Create React App
+- HTML canvas
+- GitHub Pages
+
+## Project Structure
+
+- `src/App.js` contains the main React component, portfolio data, animation state, canvas logic, and project card rendering.
+- `src/App.css` contains the visual styling, responsive layout, animation effects, and card presentation.
+- `public/` contains static assets used by the deployed site.
 
 ## Available Scripts
 
-In the project directory, you can run:
+From the `my-app` directory, run:
 
 ### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Starts the development server at [http://localhost:3000](http://localhost:3000).
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Creates an optimized production build in the `build` folder.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### `npm test`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Runs the test runner in watch mode.
 
-### `npm run eject`
+### `npm run deploy`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Builds and deploys the app to GitHub Pages using the configured `homepage` value.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Live Site
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The app is configured for deployment at:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+https://isaacmatt.github.io/eternal-infinite-void
 
-## Learn More
+## Collaboration Notes
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project reflects an iterative development workflow using React and JavaScript as the core implementation tools. Claude was used as a collaborative assistant during parts of the process to explore interface direction, refine portfolio wording, and think through interactive presentation details, while the final app structure and implementation remain grounded in the repository's React code.
