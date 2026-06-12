@@ -38,7 +38,7 @@ function App() {
     {
       title: 'TestWebPage Alpha',
       subtitle: 'Frontend Architecture & Deployment Sandbox',
-      details: 'An experimental web development environment used to prototype layout systems, deployment workflows, and responsive UI components. Built to test Git-based version control, static hosting configurations, and frontend performance considerations. Serves as a sandbox for iterative design and infrastructure experimentation.',
+      details: 'Built a React deployment sandbox to prototype responsive UI components, layout patterns, and GitHub Pages release workflows. Used version-controlled iterations to validate static hosting behavior, frontend performance, and maintainable component structure.',
       tags: ['React', 'GitHub Pages', 'Responsive UI'],
       category: 'web',
       repoUrl: 'https://github.com/isaacmatt/TestWebPage_Alpha',
@@ -46,7 +46,7 @@ function App() {
     {
       title: 'AI Municipal Issue Router',
       subtitle: 'IBM watsonx Hackathon',
-      details: 'An end-to-end workflow platform where residents submit infrastructure issues (e.g., road damage) via image and text input. Integrates classification logic, prioritization workflows, and routing mechanisms for human review and work order generation. Designed with agentic orchestration principles for structured intake, automated triage, and downstream approval integration.',
+      details: 'Built an IBM watsonx hackathon prototype that accepts resident infrastructure reports through image and text input. Implemented classification, prioritization, and routing logic to move issues from automated intake into human review and work order preparation.',
       tags: ['AI', 'IBM watsonx', 'Python', 'Agentic'],
       category: 'ai',
       repoUrl: 'https://github.com/isaacmatt/IBM_watsonx-Hackathon-Orchestrate',
@@ -54,7 +54,7 @@ function App() {
     {
       title: 'Modular Motor Control Framework',
       subtitle: 'C++ Embedded Systems',
-      details: 'A modular C++ control framework for managing 12V worm gear motors using Arduino-based microcontrollers. Implements object-oriented abstractions for motor control, position tracking, and structured command execution. Supports scalable integration of encoders, PWM control, and multi-mode operation with clean hardware/logic separation.',
+      details: 'Designed a modular C++ control framework for Arduino-class microcontrollers driving 12V worm gear motors. Implemented reusable abstractions for PWM control, encoder-ready position tracking, and command modes while keeping hardware access separate from control logic.',
       tags: ['C++', 'Arduino', 'Embedded', 'OOP'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/MotorCode',
@@ -62,7 +62,7 @@ function App() {
     {
       title: 'Wireless + I2C Hybrid Comms',
       subtitle: 'Distributed Microcontroller Architecture',
-      details: 'A dual-layer communication architecture combining wireless transmission with I2C-based device coordination for remote controller systems. Ensures reliable data transfer between distributed microcontrollers while managing timing constraints and structured message handling.',
+      details: 'Developed a distributed microcontroller communication model that combines wireless transmission with I2C device coordination. Structured message handling and timing boundaries to support reliable data exchange across remote controller hardware.',
       tags: ['C++', 'I2C', 'Wireless', 'Embedded'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/Micro_Comms',
@@ -70,7 +70,7 @@ function App() {
     {
       title: 'Raspberry Pi Pico W WiFi Module',
       subtitle: 'Embedded Wireless Networking',
-      details: 'A hardware-focused project integrating the Raspberry Pi Pico W as a WiFi-enabled module for microcontroller systems. Explores wireless connectivity, board-level integration, and structured firmware workflows for sending data between embedded devices and networked services.',
+      details: 'Implemented a Raspberry Pi Pico W WiFi module for embedded network communication. Developed firmware workflows for connecting microcontroller hardware to wireless services, testing data transfer reliability, and preparing the module for larger system integration.',
       tags: ['Pico W', 'WiFi', 'Embedded', 'MicroPython'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/RaspberryPi_WifiManager',
@@ -78,7 +78,7 @@ function App() {
     {
       title: 'SD Card PCB Design',
       subtitle: 'Storage Interface Hardware',
-      details: 'A PCB design project for an SD card interface module, focused on reliable storage connectivity, compact board layout, and clean signal routing. Covers schematic capture, footprint selection, and layout considerations for integrating removable storage into embedded systems.',
+      details: 'Designed an SD card breakout PCB for embedded storage integration. Created the schematic and board layout with attention to footprint selection, compact routing, and reliable signal paths for removable storage in microcontroller projects.',
       tags: ['PCB Design', 'SD Card', 'KiCad', 'Hardware'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/SD_Card_Breakout_Board',
@@ -86,7 +86,7 @@ function App() {
     {
       title: 'ML Pothole Detection System',
       subtitle: 'Computer Vision - Capstone Project',
-      details: 'A full-stack computer vision pipeline for detecting road damage using drone-captured imagery. Built using Python, OpenCV, and PyTorch (YOLO-based models). Includes dataset preprocessing, augmentation workflows, model training, and performance benchmarking under edge-compute constraints. Achieved >90% detection accuracy through iterative refinement.',
+      details: 'Built a computer vision pipeline for detecting road damage in drone imagery using Python, OpenCV, PyTorch, and YOLO-based models. Developed preprocessing, augmentation, training, and benchmarking workflows, achieving greater than 90% detection accuracy through iterative model refinement.',
       tags: ['Python', 'PyTorch', 'YOLO', 'OpenCV'],
       category: 'ml',
       repoUrl: 'https://github.com/isaacmatt/2025ECE_CapstoneG12',
@@ -94,12 +94,38 @@ function App() {
     {
       title: 'Creative Systems Portfolio',
       subtitle: 'Experimental & Generative Design',
-      details: 'A curated portfolio showcasing experimental and creative technical work, blending software engineering with visual and conceptual design. Highlights exploratory projects focused on simulation, generative design, and performance-conscious rendering.',
+      details: 'Built and curated an experimental portfolio for technical projects that combine software engineering, interactive visuals, and generative design. Focused on performance-conscious rendering, polished presentation, and clear communication of engineering work.',
       tags: ['React', 'Creative', 'Generative'],
       category: 'creative',
       repoUrl: 'https://github.com/isaacmatt/eternal-infinite-void',
     },
   ];
+
+  const handleCardPointerMove = (event) => {
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const pullX = ((x / rect.width) - 0.5) * 10;
+    const pullY = ((y / rect.height) - 0.5) * 8;
+    const tilt = ((x / rect.width) - 0.5) * 1.6;
+
+    card.style.setProperty('--grav-x', `${pullX.toFixed(2)}px`);
+    card.style.setProperty('--grav-y', `${pullY.toFixed(2)}px`);
+    card.style.setProperty('--grav-tilt', `${tilt.toFixed(2)}deg`);
+    card.style.setProperty('--grav-glow', '1');
+    card.style.setProperty('--grav-light-x', `${x.toFixed(0)}px`);
+    card.style.setProperty('--grav-light-y', `${y.toFixed(0)}px`);
+  };
+
+  const handleCardPointerLeave = (event) => {
+    const card = event.currentTarget;
+
+    card.style.setProperty('--grav-x', '0px');
+    card.style.setProperty('--grav-y', '0px');
+    card.style.setProperty('--grav-tilt', '0deg');
+    card.style.setProperty('--grav-glow', '0');
+  };
 
   const triggerBoost = () => {
     setIsBoosted(true);
@@ -383,6 +409,8 @@ function App() {
                 className={`work-item${isExpanded ? ' work-item-expanded' : ''}`}
                 data-category={item.category}
                 style={{ animationDelay: `${index * 75}ms` }}
+                onPointerMove={handleCardPointerMove}
+                onPointerLeave={handleCardPointerLeave}
               >
                 <div
                   className="work-item-header"

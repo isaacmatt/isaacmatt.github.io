@@ -287,13 +287,41 @@ h2 {
 }
 
 .work-item {
+  --card-lift: 0px;
+  --grav-x: 0px;
+  --grav-y: 0px;
+  --grav-tilt: 0deg;
+  --grav-glow: 0;
+  --grav-light-x: 50%;
+  --grav-light-y: 50%;
+  position: relative;
   border-radius: 10px;
   border: 1px solid rgba(172, 184, 206, 0.18);
   border-left: 3px solid rgba(190, 141, 255, 0.55);
   background: linear-gradient(135deg, rgba(18, 25, 38, 0.55), rgba(10, 11, 20, 0.48));
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transform: translate3d(var(--grav-x), calc(var(--grav-y) + var(--card-lift)), 0) rotate(var(--grav-tilt));
+  transform-origin: center;
+  transition: transform 180ms ease, box-shadow 200ms ease, border-color 200ms ease;
   animation: card-enter 0.4s ease both;
   overflow: hidden;
+  will-change: transform;
+}
+
+.work-item::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background:
+    radial-gradient(circle at var(--grav-light-x) var(--grav-light-y), rgba(206, 178, 255, 0.18), rgba(122, 66, 207, 0.07) 34%, rgba(0, 0, 0, 0) 66%);
+  opacity: var(--grav-glow);
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  z-index: 0;
+}
+
+.work-item > * {
+  position: relative;
+  z-index: 1;
 }
 
 .work-item[data-category="web"]      { border-left-color: rgba(125, 207, 182, 0.75); }
@@ -303,7 +331,8 @@ h2 {
 .work-item[data-category="creative"] { border-left-color: rgba(206, 147, 216, 0.75); }
 
 .work-item:hover {
-  transform: translateY(-2px);
+  --card-lift: -2px;
+  border-color: rgba(205, 178, 255, 0.34);
   box-shadow: 0 12px 28px rgba(20, 8, 40, 0.45);
 }
 
@@ -500,5 +529,16 @@ h2 {
 
   .work-item-tags {
     justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work-item {
+    transform: none;
+    transition: box-shadow 160ms ease, border-color 160ms ease;
+  }
+
+  .work-item:hover {
+    --card-lift: 0px;
   }
 }
