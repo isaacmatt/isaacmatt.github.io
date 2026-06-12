@@ -27,6 +27,8 @@ function App() {
   const hoverPlaybackRef = useRef({ a: 2.5, b: 0.57, c: 1.9 });
   const introRef = useRef(null);
   const workRef = useRef(null);
+  const canvasRef = useRef(null);
+  const mouseRef = useRef({ x: -9999, y: -9999 });
 
   const aboutSection = {
     title: 'About Me',
@@ -66,8 +68,24 @@ function App() {
       repoUrl: 'https://github.com/isaacmatt/Micro_Comms',
     },
     {
+      title: 'Raspberry Pi Pico W WiFi Module',
+      subtitle: 'Embedded Wireless Networking',
+      details: 'A hardware-focused project integrating the Raspberry Pi Pico W as a WiFi-enabled module for microcontroller systems. Explores wireless connectivity, board-level integration, and structured firmware workflows for sending data between embedded devices and networked services.',
+      tags: ['Pico W', 'WiFi', 'Embedded', 'MicroPython'],
+      category: 'hardware',
+      repoUrl: 'https://github.com/isaacmatt/RaspberryPi_WifiManager',
+    },
+    {
+      title: 'SD Card PCB Design',
+      subtitle: 'Storage Interface Hardware',
+      details: 'A PCB design project for an SD card interface module, focused on reliable storage connectivity, compact board layout, and clean signal routing. Covers schematic capture, footprint selection, and layout considerations for integrating removable storage into embedded systems.',
+      tags: ['PCB Design', 'SD Card', 'KiCad', 'Hardware'],
+      category: 'hardware',
+      repoUrl: 'https://github.com/isaacmatt/SD_Card_Breakout_Board',
+    },
+    {
       title: 'ML Pothole Detection System',
-      subtitle: 'Computer Vision · Capstone Project',
+      subtitle: 'Computer Vision - Capstone Project',
       details: 'A full-stack computer vision pipeline for detecting road damage using drone-captured imagery. Built using Python, OpenCV, and PyTorch (YOLO-based models). Includes dataset preprocessing, augmentation workflows, model training, and performance benchmarking under edge-compute constraints. Achieved >90% detection accuracy through iterative refinement.',
       tags: ['Python', 'PyTorch', 'YOLO', 'OpenCV'],
       category: 'ml',
@@ -206,8 +224,117 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const PARTICLE_COUNT = 88;
+    const INFLUENCE_RADIUS = 230;
+    const RADIAL_FORCE = 0.14;
+    const TANGENTIAL_FORCE = 0.48;
+    const RETURN_STRENGTH = 0.022;
+    const DAMPING = 0.87;
+
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+
+    const particles = Array.from({ length: PARTICLE_COUNT }, () => {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      return { x, y, homeX: x, homeY: y, vx: 0, vy: 0, size: Math.random() * 1.5 + 0.35, baseOpacity: Math.random() * 0.32 + 0.1 };
+    });
+
+    const handleResize = () => {
+      const sx = window.innerWidth / W;
+      const sy = window.innerHeight / H;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      particles.forEach(p => { p.homeX *= sx; p.homeY *= sy; p.x *= sx; p.y *= sy; });
+    };
+
+    const onMouseMove = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
+    const onMouseLeave = () => { mouseRef.current = { x: -9999, y: -9999 }; };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseleave', onMouseLeave);
+
+    let animId;
+    const animate = () => {
+      ctx.clearRect(0, 0, W, H);
+      const mx = mouseRef.current.x;
+      const my = mouseRef.current.y;
+
+      if (mx > 0) {
+        const grd = ctx.createRadialGradient(mx, my, 0, mx, my, 130);
+        grd.addColorStop(0, 'rgba(150, 70, 255, 0.07)');
+        grd.addColorStop(0.5, 'rgba(90, 30, 180, 0.03)');
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(mx, my, 130, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      particles.forEach(p => {
+        const dx = mx - p.x;
+        const dy = my - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < INFLUENCE_RADIUS && dist > 2) {
+          const t = 1 - dist / INFLUENCE_RADIUS;
+          p.vx += (dx / dist) * t * RADIAL_FORCE;
+          p.vy += (dy / dist) * t * RADIAL_FORCE;
+          p.vx += (-dy / dist) * t * TANGENTIAL_FORCE;
+          p.vy += (dx / dist) * t * TANGENTIAL_FORCE;
+        }
+
+        p.vx += (p.homeX - p.x) * RETURN_STRENGTH;
+        p.vy += (p.homeY - p.y) * RETURN_STRENGTH;
+        p.vx *= DAMPING;
+        p.vy *= DAMPING;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        const proximity = dist < INFLUENCE_RADIUS ? Math.max(0, 1 - dist / INFLUENCE_RADIUS) : 0;
+        const opacity = p.baseOpacity + proximity * 0.55;
+        const r = Math.round(175 + proximity * 80);
+        const g = Math.round(135 + proximity * 35);
+
+        if (proximity > 0.25) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, (p.size + proximity) * 2.8, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(170, 90, 255, ${proximity * 0.11})`;
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size + proximity * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r}, ${g}, 255, ${opacity})`;
+        ctx.fill();
+      });
+
+      animId = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseleave', onMouseLeave);
+    };
+  }, []);
+
   return (
     <div className="App">
+      <canvas ref={canvasRef} className="particle-canvas" aria-hidden="true" />
       <div className="scroll-controls">
         <button onClick={() => scrollToSection(introRef)}>Intro</button>
         <button onClick={() => scrollToSection(workRef)}>Work</button>
@@ -278,21 +405,23 @@ function App() {
                         <span key={tag} className="work-tag">{tag}</span>
                       ))}
                     </div>
-                    <span className="work-item-toggle" aria-hidden="true">{isExpanded ? '−' : '+'}</span>
+                    <span className="work-item-toggle" aria-hidden="true">{isExpanded ? '-' : '+'}</span>
                   </div>
                 </div>
                 <div className={`work-item-body${isExpanded ? ' expanded' : ''}`}>
                   <div>
                     <p>{item.details}</p>
-                    <a
-                      href={item.repoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="work-repo-btn"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View Repository
-                    </a>
+                    {item.repoUrl && (
+                      <a
+                        href={item.repoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="work-repo-btn"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View Repository
+                      </a>
+                    )}
                   </div>
                 </div>
               </article>
