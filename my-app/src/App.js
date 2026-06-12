@@ -1,30 +1,22 @@
 import './App.css';
 import { useEffect, useRef, useState } from 'react';
-
-const RING_BASE_DURATIONS = {
-  a: 6500,
-  b: 4800,
-  c: 3600,
-};
-
-const randomBetween = (min, max) => Math.random() * (max - min) + min;
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
+import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
 
 function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [isBoosted, setIsBoosted] = useState(false);
-  const [spinRate, setSpinRate] = useState(1);
   const [expandedIndex, setExpandedIndex] = useState(null);
 
   const toggleExpand = (index) => {
     setExpandedIndex(prev => prev === index ? null : index);
   };
   const boostTimeoutRef = useRef(null);
-  const videoRef = useRef(null);
-  const ringARef = useRef(null);
-  const ringBRef = useRef(null);
-  const ringCRef = useRef(null);
-  const ringAnimationsRef = useRef([]);
-  const hoverPlaybackRef = useRef({ a: 2.5, b: 0.57, c: 1.9 });
   const introRef = useRef(null);
   const workRef = useRef(null);
   const canvasRef = useRef(null);
@@ -127,36 +119,49 @@ function App() {
     card.style.setProperty('--grav-glow', '0');
   };
 
+  const handleBlackholePointerMove = (event) => {
+    const blackhole = event.currentTarget;
+    const rect = blackhole.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const dx = centerX - x;
+    const dy = centerY - y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const captureRadius = rect.width * 0.78;
+    const intensity = Math.max(0, Math.min(1, 1 - distance / captureRadius));
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    blackhole.style.setProperty('--cursor-x', `${x.toFixed(0)}px`);
+    blackhole.style.setProperty('--cursor-y', `${y.toFixed(0)}px`);
+    blackhole.style.setProperty('--light-angle', `${angle.toFixed(2)}deg`);
+    blackhole.style.setProperty('--light-length', `${Math.max(40, distance).toFixed(0)}px`);
+    blackhole.style.setProperty('--light-intensity', intensity.toFixed(2));
+  };
+
+  const handleBlackholePointerLeave = (event) => {
+    handleBlackholeLeave();
+    event.currentTarget.style.setProperty('--light-intensity', '0');
+  };
+
   const triggerBoost = () => {
     setIsBoosted(true);
-    setSpinRate(1.9);
     if (boostTimeoutRef.current) {
       clearTimeout(boostTimeoutRef.current);
     }
     boostTimeoutRef.current = setTimeout(() => {
       setIsBoosted(false);
-      setSpinRate(1);
       boostTimeoutRef.current = null;
     }, 900);
   };
 
   const handleBlackholeEnter = () => {
-    hoverPlaybackRef.current = {
-      a: randomBetween(1.4, 3.3),
-      b: randomBetween(0.35, 1.1),
-      c: randomBetween(1.2, 2.8),
-    };
     setIsHovered(true);
-    if (!isBoosted) {
-      setSpinRate(1.15);
-    }
   };
 
   const handleBlackholeLeave = () => {
     setIsHovered(false);
-    if (!isBoosted) {
-      setSpinRate(1);
-    }
   };
 
   const handleBlackholeKeyDown = (event) => {
@@ -171,76 +176,6 @@ function App() {
       sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = spinRate;
-    }
-  }, [spinRate]);
-
-  useEffect(() => {
-    const animationConfigs = [
-      {
-        element: ringARef.current,
-        keyframes: [
-          { transform: 'rotate(0deg) scale(1)', opacity: 0.8 },
-          { transform: 'rotate(180deg) scale(1.02)', opacity: 1 },
-          { transform: 'rotate(360deg) scale(1)', opacity: 0.8 },
-        ],
-        duration: RING_BASE_DURATIONS.a,
-      },
-      {
-        element: ringBRef.current,
-        keyframes: [
-          { transform: 'rotate(360deg)', opacity: 0.72 },
-          { opacity: 0.95, offset: 0.5 },
-          { transform: 'rotate(0deg)', opacity: 0.72 },
-        ],
-        duration: RING_BASE_DURATIONS.b,
-      },
-      {
-        element: ringCRef.current,
-        keyframes: [
-          { transform: 'rotate(0deg)', opacity: 0.66 },
-          { opacity: 0.88, offset: 0.5 },
-          { transform: 'rotate(360deg)', opacity: 0.66 },
-        ],
-        duration: RING_BASE_DURATIONS.c,
-      },
-    ];
-
-    ringAnimationsRef.current = animationConfigs
-      .filter((config) => config.element && typeof config.element.animate === 'function')
-      .map((config) =>
-        config.element.animate(config.keyframes, {
-          duration: config.duration,
-          iterations: Infinity,
-          easing: 'linear',
-        })
-      );
-
-    return () => {
-      ringAnimationsRef.current.forEach((animation) => animation.cancel());
-      ringAnimationsRef.current = [];
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ringAnimationsRef.current.length) {
-      return;
-    }
-
-    if (isHovered) {
-      ringAnimationsRef.current[0].playbackRate = hoverPlaybackRef.current.a;
-      ringAnimationsRef.current[1].playbackRate = hoverPlaybackRef.current.b;
-      ringAnimationsRef.current[2].playbackRate = hoverPlaybackRef.current.c;
-      return;
-    }
-
-    ringAnimationsRef.current[0].playbackRate = 1;
-    ringAnimationsRef.current[1].playbackRate = 1;
-    ringAnimationsRef.current[2].playbackRate = 1;
-  }, [isHovered]);
 
   useEffect(() => {
     return () => {
@@ -372,24 +307,27 @@ function App() {
         tabIndex={0}
         aria-label="Activate black hole spin burst"
         onMouseEnter={handleBlackholeEnter}
-        onMouseLeave={handleBlackholeLeave}
+        onPointerMove={handleBlackholePointerMove}
+        onPointerLeave={handleBlackholePointerLeave}
         onClick={triggerBoost}
         onKeyDown={handleBlackholeKeyDown}
       >
-        <video
-          ref={videoRef}
-          className="blackhole-video"
-          src={`${process.env.PUBLIC_URL}/blackhole-loop.mp4`}
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
-        <div ref={ringARef} className="inner-spin-ring ring-a"></div>
-        <div ref={ringBRef} className="inner-spin-ring ring-b"></div>
-        <div ref={ringCRef} className="inner-spin-ring ring-c"></div>
-        <div className="lensing-halo"></div>
-        <div className="center-shadow"></div>
+        <div className="cursor-light" aria-hidden="true"></div>
+        <div className="gravitational-lens lens-back"></div>
+        <div className="matter-cloud cloud-outer"></div>
+        <div className="matter-cloud cloud-inner"></div>
+        <div className="accretion-disk disk-back"></div>
+        <div className="photon-shell"></div>
+        <div className="event-horizon">
+          <div className="singularity-glint"></div>
+        </div>
+        <div className="accretion-disk disk-front"></div>
+        <div className="matter-plane"></div>
+        <div className="lensed-arc arc-top"></div>
+        <div className="lensed-arc arc-bottom"></div>
+        <div className="doppler-sweep"></div>
+        <div className="gravity-ripple ripple-one"></div>
+        <div className="gravity-ripple ripple-two"></div>
       </div>
       <h1>Welcome to my portfolio!</h1>
       <h2>Thanks for visiting!</h2>
@@ -404,43 +342,49 @@ function App() {
           {workItems.map((item, index) => {
             const isExpanded = expandedIndex === index;
             return (
-              <article
+              <Card
+                component="article"
                 key={item.title}
                 className={`work-item${isExpanded ? ' work-item-expanded' : ''}`}
                 data-category={item.category}
+                elevation={0}
                 style={{ animationDelay: `${index * 75}ms` }}
                 onPointerMove={handleCardPointerMove}
                 onPointerLeave={handleCardPointerLeave}
               >
-                <div
+                <CardActionArea
                   className="work-item-header"
-                  role="button"
-                  tabIndex={0}
                   aria-expanded={isExpanded}
                   onClick={() => toggleExpand(index)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(index); }
-                  }}
                 >
-                  <div className="work-item-meta">
-                    <span className="work-item-category">{item.category}</span>
-                    <h4>{item.title}</h4>
-                    <span className="work-item-subtitle">{item.subtitle}</span>
-                  </div>
-                  <div className="work-item-right">
-                    <div className="work-item-tags">
+                  <Box className="work-item-meta">
+                    <Typography component="span" className="work-item-category">
+                      {item.category}
+                    </Typography>
+                    <Typography component="h4" className="work-item-title">
+                      {item.title}
+                    </Typography>
+                    <Typography component="span" className="work-item-subtitle">
+                      {item.subtitle}
+                    </Typography>
+                  </Box>
+                  <Box className="work-item-right">
+                    <Box className="work-item-tags">
                       {item.tags.map(tag => (
-                        <span key={tag} className="work-tag">{tag}</span>
+                        <Chip key={tag} label={tag} size="small" className="work-tag" />
                       ))}
-                    </div>
-                    <span className="work-item-toggle" aria-hidden="true">{isExpanded ? '-' : '+'}</span>
-                  </div>
-                </div>
+                    </Box>
+                    <Typography component="span" className="work-item-toggle" aria-hidden="true">
+                      {isExpanded ? '-' : '+'}
+                    </Typography>
+                  </Box>
+                </CardActionArea>
                 <div className={`work-item-body${isExpanded ? ' expanded' : ''}`}>
-                  <div>
+                  <CardContent className="work-item-body-content">
                     <p>{item.details}</p>
                     {item.repoUrl && (
-                      <a
+                      <Button
+                        component="a"
                         href={item.repoUrl}
                         target="_blank"
                         rel="noreferrer"
@@ -448,11 +392,11 @@ function App() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         View Repository
-                      </a>
+                      </Button>
                     )}
-                  </div>
+                  </CardContent>
                 </div>
-              </article>
+              </Card>
             );
           })}
         </div>
