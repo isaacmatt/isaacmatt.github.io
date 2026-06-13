@@ -4,7 +4,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
-import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import * as THREE from 'three';
@@ -229,13 +228,11 @@ function ShaderBlackHole({ isResetting, isHovered }) {
 
 function App() {
   const [isHovered, setIsHovered] = useState(false);
-  const [isBoosted, setIsBoosted] = useState(false);
   const [featuredIndex, setFeaturedIndex] = useState(null);
   const [isCssHovered, setIsCssHovered] = useState(false);
   const [isCssBoosted, setIsCssBoosted] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  const boostTimeoutRef = useRef(null);
   const cssBooostTimeoutRef = useRef(null);
   const resetTimeoutRef = useRef(null);
   const hasAutoFeaturedRef = useRef(false);
@@ -370,17 +367,6 @@ function App() {
     event.currentTarget.style.setProperty('--light-intensity', '0');
   };
 
-  const triggerBoost = () => {
-    setIsBoosted(true);
-    if (boostTimeoutRef.current) {
-      clearTimeout(boostTimeoutRef.current);
-    }
-    boostTimeoutRef.current = setTimeout(() => {
-      setIsBoosted(false);
-      boostTimeoutRef.current = null;
-    }, 900);
-  };
-
   const triggerCssBoost = () => {
     setIsCssBoosted(true);
     if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
@@ -422,7 +408,6 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (boostTimeoutRef.current) clearTimeout(boostTimeoutRef.current);
       if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
       if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
     };
@@ -489,6 +474,8 @@ function App() {
 
     cardRefs.current.forEach(ref => { if (ref) observer.observe(ref); });
     return () => { observer.disconnect(); clearTimeout(scrollSwapTimeoutRef.current); };
+  // workItems.length is constant for the lifetime of the component
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
