@@ -7,16 +7,223 @@ import CardActionArea from '@mui/material/CardActionArea';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
+import * as THREE from 'three';
+
+const blackHoleVertexShader = `
+  void main() {
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+const blackHoleFragmentShader = `
+precision highp float;
+
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float spinSpeed;
+uniform float camDist;
+uniform float camElev;
+uniform vec3 diskColorInner;
+uniform vec3 diskColorOuter;
+uniform vec3 nebulaColor;
+
+#define STEPS 300
+#define RS 1.0
+#define DISK_IN 2.6
+#define DISK_OUT 9.0
+#define DT 0.14
+
+float hash(vec3 p) {
+  p = fract(p * 0.3183099 + 0.1);
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float noise(vec3 x) {
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+        mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+    mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+        mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y),
+    f.z);
+}
+
+float fbm(vec3 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * noise(p);
+    p *= 2.0;
+    a *= 0.5;
+  }
+  return v;
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / iResolution.y;
+
+  vec3 camPos = vec3(0.0, sin(camElev) * camDist, -cos(camElev) * camDist);
+  vec3 forward = normalize(-camPos);
+  vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
+  vec3 up = cross(forward, right);
+  float fov = 1.3;
+  vec3 dir = normalize(forward + uv.x * fov * right + uv.y * fov * up);
+
+  vec3 p = camPos;
+  vec3 vel = dir;
+  vec3 hVec = cross(p, vel);
+  float h2 = dot(hVec, hVec);
+
+  vec3 color = vec3(0.0);
+  bool captured = false;
+
+  for (int i = 0; i < STEPS; i++) {
+    float r = length(p);
+    if (r < RS) {
+      captured = true;
+      break;
+    }
+
+    vec3 accel = -1.5 * h2 * p / pow(r, 5.0);
+    vel += accel * DT;
+    vec3 np = p + vel * DT;
+
+    if (p.y * np.y < 0.0) {
+      float t = p.y / (p.y - np.y);
+      vec3 hit = mix(p, np, t);
+      float rd = length(hit.xz);
+
+      if (rd > DISK_IN && rd < DISK_OUT) {
+        float ang = atan(hit.z, hit.x);
+        float omega = spinSpeed * pow(rd, -1.5) * 10.0;
+        float swirl = ang + iTime * omega;
+        float radial = (rd - DISK_IN) / (DISK_OUT - DISK_IN);
+        float n = fbm(vec3(cos(swirl) * rd, sin(swirl) * rd, iTime * 0.15) * 0.7);
+        float bright = pow(1.0 - radial, 1.6) * (0.55 + 0.9 * n);
+
+        vec3 tang = normalize(vec3(-hit.z, 0.0, hit.x));
+        float beam = dot(tang, normalize(-dir));
+        float doppler = 1.0 + 0.7 * beam;
+        bright *= doppler;
+
+        vec3 col = mix(diskColorInner, diskColorOuter, radial);
+        color += col * max(bright, 0.0) * 1.7;
+      }
+    }
+
+    p = np;
+    if (r > 32.0 && dot(vel, p) > 0.0) break;
+  }
+
+  if (!captured && dot(color, color) < 0.02) {
+    vec3 d = normalize(vel);
+    float s = hash(floor(d * 260.0));
+    float star = smoothstep(0.9965, 1.0, s);
+    color += vec3(star) * vec3(0.85, 0.85, 1.0);
+    color += nebulaColor * 0.025 * fbm(d * 4.0);
+  }
+
+  color = color / (color + vec3(1.0));
+  color = pow(color, vec3(0.85));
+
+  float luma = dot(color, vec3(0.299, 0.587, 0.114));
+  float alpha = captured ? 1.0 : smoothstep(0.004, 0.07, luma);
+
+  gl_FragColor = vec4(color, alpha);
+}
+`;
+
+function ShaderBlackHole({ isBoosted, isHovered }) {
+  const mountRef = useRef(null);
+  const boostRef = useRef(isBoosted);
+  const hoveredRef = useRef(isHovered);
+
+  useEffect(() => {
+    boostRef.current = isBoosted;
+  }, [isBoosted]);
+
+  useEffect(() => {
+    hoveredRef.current = isHovered;
+  }, [isHovered]);
+
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container) return undefined;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, premultipliedAlpha: false });
+    renderer.setPixelRatio(1);
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const uniforms = {
+      iResolution: { value: new THREE.Vector2() },
+      iTime: { value: 0 },
+      spinSpeed: { value: 0.6 },
+      camDist: { value: 16.0 },
+      camElev: { value: 0.16 },
+      diskColorInner: { value: new THREE.Vector3(0.92, 0.70, 1.00) },
+      diskColorOuter: { value: new THREE.Vector3(0.45, 0.08, 0.85) },
+      nebulaColor: { value: new THREE.Vector3(0.30, 0.05, 0.55) },
+    };
+    const material = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: blackHoleVertexShader,
+      fragmentShader: blackHoleFragmentShader,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const resize = () => {
+      const { clientWidth, clientHeight } = container;
+      renderer.setSize(clientWidth, clientHeight, false);
+      uniforms.iResolution.value.set(clientWidth, clientHeight);
+    };
+
+    let animationId;
+    const start = performance.now();
+    const animate = () => {
+      const elapsed = (performance.now() - start) / 1000;
+      uniforms.iTime.value = elapsed;
+      uniforms.spinSpeed.value = boostRef.current ? 1.05 : hoveredRef.current ? 0.9 : 0.58 + Math.sin(elapsed * 0.7) * 0.12;
+      renderer.render(scene, camera);
+      animationId = requestAnimationFrame(animate);
+    };
+
+    resize();
+    animate();
+    window.addEventListener('resize', resize);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', resize);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
+    };
+  }, []);
+
+  return <div ref={mountRef} className="shader-blackhole-canvas" aria-hidden="true" />;
+}
 
 function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [isBoosted, setIsBoosted] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [isCssHovered, setIsCssHovered] = useState(false);
+  const [isCssBoosted, setIsCssBoosted] = useState(false);
 
   const toggleExpand = (index) => {
     setExpandedIndex(prev => prev === index ? null : index);
   };
   const boostTimeoutRef = useRef(null);
+  const cssBooostTimeoutRef = useRef(null);
   const introRef = useRef(null);
   const workRef = useRef(null);
   const canvasRef = useRef(null);
@@ -156,6 +363,15 @@ function App() {
     }, 900);
   };
 
+  const triggerCssBoost = () => {
+    setIsCssBoosted(true);
+    if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
+    cssBooostTimeoutRef.current = setTimeout(() => {
+      setIsCssBoosted(false);
+      cssBooostTimeoutRef.current = null;
+    }, 900);
+  };
+
   const handleBlackholeEnter = () => {
     setIsHovered(true);
   };
@@ -179,9 +395,8 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (boostTimeoutRef.current) {
-        clearTimeout(boostTimeoutRef.current);
-      }
+      if (boostTimeoutRef.current) clearTimeout(boostTimeoutRef.current);
+      if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
     };
   }, []);
 
@@ -302,7 +517,7 @@ function App() {
       </div>
       <section ref={introRef} className="intro-section">
       <div
-        className={`blackhole ${isHovered ? 'blackhole-hover' : ''} ${isBoosted ? 'blackhole-boost' : ''}`}
+        className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''} ${isBoosted ? 'blackhole-boost' : ''}`}
         role="button"
         tabIndex={0}
         aria-label="Activate black hole spin burst"
@@ -312,22 +527,7 @@ function App() {
         onClick={triggerBoost}
         onKeyDown={handleBlackholeKeyDown}
       >
-        <div className="cursor-light" aria-hidden="true"></div>
-        <div className="gravitational-lens lens-back"></div>
-        <div className="matter-cloud cloud-outer"></div>
-        <div className="matter-cloud cloud-inner"></div>
-        <div className="accretion-disk disk-back"></div>
-        <div className="photon-shell"></div>
-        <div className="event-horizon">
-          <div className="singularity-glint"></div>
-        </div>
-        <div className="accretion-disk disk-front"></div>
-        <div className="matter-plane"></div>
-        <div className="lensed-arc arc-top"></div>
-        <div className="lensed-arc arc-bottom"></div>
-        <div className="doppler-sweep"></div>
-        <div className="gravity-ripple ripple-one"></div>
-        <div className="gravity-ripple ripple-two"></div>
+        <ShaderBlackHole isBoosted={isBoosted} isHovered={isHovered} />
       </div>
       <h1>Welcome to my portfolio!</h1>
       <h2>Thanks for visiting!</h2>
@@ -399,6 +599,36 @@ function App() {
               </Card>
             );
           })}
+        </div>
+      </section>
+      <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '72px', marginBottom: '48px' }}>
+        <div
+          className={`blackhole${isCssHovered ? ' blackhole-hover' : ''}${isCssBoosted ? ' blackhole-boost' : ''}`}
+          role="button"
+          tabIndex={0}
+          aria-label="Activate CSS black hole"
+          onMouseEnter={() => setIsCssHovered(true)}
+          onPointerMove={handleBlackholePointerMove}
+          onPointerLeave={(e) => { setIsCssHovered(false); e.currentTarget.style.setProperty('--light-intensity', '0'); }}
+          onClick={triggerCssBoost}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerCssBoost(); } }}
+        >
+          <div className="gravitational-lens" />
+          <div className="matter-cloud cloud-outer" />
+          <div className="matter-cloud cloud-inner" />
+          <div className="accretion-disk disk-back" />
+          <div className="accretion-disk disk-front" />
+          <div className="matter-plane" />
+          <div className="event-horizon">
+            <div className="singularity-glint" />
+          </div>
+          <div className="photon-shell" />
+          <div className="lensed-arc arc-top" />
+          <div className="lensed-arc arc-bottom" />
+          <div className="doppler-sweep" />
+          <div className="gravity-ripple ripple-one" />
+          <div className="gravity-ripple ripple-two" />
+          <div className="cursor-light" />
         </div>
       </section>
       <footer className="site-attribution" aria-label="Icon attribution">

@@ -103,6 +103,57 @@ body {
   transform: translateZ(0);
 }
 
+.blackhole-shader {
+  width: min(620px, 88vw);
+  height: min(350px, 50vw);
+  min-height: 250px;
+  border-radius: 18px;
+  background: transparent;
+  overflow: visible;
+  animation: shader-frame-pulse 5.8s ease-in-out infinite;
+}
+
+.blackhole-shader::before {
+  inset: -8%;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 0 50%, rgba(132, 74, 218, 0.08) 66%, rgba(0, 0, 0, 0) 86%);
+  filter: blur(18px);
+  opacity: 0.8;
+  z-index: 2;
+}
+
+.blackhole-shader::after {
+  inset: -2%;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0 62%, rgba(0, 0, 0, 0.2) 74%, rgba(0, 0, 0, 0) 91%);
+  filter: blur(8px);
+  opacity: 0.9;
+  z-index: 3;
+}
+
+.shader-blackhole-canvas {
+  position: absolute;
+  inset: -8%;
+  z-index: 1;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.shader-blackhole-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.04);
+}
+
+@keyframes shader-frame-pulse {
+  0%   { filter: saturate(1) brightness(1); }
+  50%  { filter: saturate(1.16) brightness(1.06); }
+  100% { filter: saturate(1) brightness(1); }
+}
+
 .blackhole::before {
   content: '';
   position: absolute;
@@ -615,7 +666,7 @@ h2 {
   --grav-light-x: 50%;
   --grav-light-y: 50%;
   position: relative;
-  margin-block: 4px;
+  margin-block: 4Can px;
   border-radius: 10px;
   border: 1px solid rgba(172, 184, 206, 0.18);
   border-left: 3px solid rgba(190, 141, 255, 0.55);
