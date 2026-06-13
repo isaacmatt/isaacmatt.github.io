@@ -136,18 +136,22 @@ void main() {
 }
 `;
 
-function ShaderBlackHole({ isBoosted, isHovered }) {
+function ShaderBlackHole({ isResetting, isHovered }) {
   const mountRef = useRef(null);
-  const boostRef = useRef(isBoosted);
   const hoveredRef = useRef(isHovered);
-
-  useEffect(() => {
-    boostRef.current = isBoosted;
-  }, [isBoosted]);
+  const isResettingRef = useRef(false);
+  const resetStartTimeRef = useRef(null);
 
   useEffect(() => {
     hoveredRef.current = isHovered;
   }, [isHovered]);
+
+  useEffect(() => {
+    if (isResetting && !isResettingRef.current) {
+      resetStartTimeRef.current = performance.now();
+    }
+    isResettingRef.current = isResetting;
+  }, [isResetting]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -190,7 +194,18 @@ function ShaderBlackHole({ isBoosted, isHovered }) {
     const animate = () => {
       const elapsed = (performance.now() - start) / 1000;
       uniforms.iTime.value = elapsed;
-      uniforms.spinSpeed.value = boostRef.current ? 1.05 : hoveredRef.current ? 0.9 : 0.58 + Math.sin(elapsed * 0.7) * 0.12;
+      let speed;
+      if (isResettingRef.current && resetStartTimeRef.current !== null) {
+        const rt = (performance.now() - resetStartTimeRef.current) / 1000;
+        if (rt < 2.0) {
+          speed = 0.58 * Math.pow(1 - rt / 2.0, 2);
+        } else {
+          speed = 0.58 * Math.min(1, Math.pow((rt - 2.0) / 1.5, 2));
+        }
+      } else {
+        speed = hoveredRef.current ? 0.9 : 0.58 + Math.sin(elapsed * 0.7) * 0.12;
+      }
+      uniforms.spinSpeed.value = speed;
       renderer.render(scene, camera);
       animationId = requestAnimationFrame(animate);
     };
@@ -215,15 +230,18 @@ function ShaderBlackHole({ isBoosted, isHovered }) {
 function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [isBoosted, setIsBoosted] = useState(false);
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [featuredIndex, setFeaturedIndex] = useState(null);
   const [isCssHovered, setIsCssHovered] = useState(false);
   const [isCssBoosted, setIsCssBoosted] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
-  const toggleExpand = (index) => {
-    setExpandedIndex(prev => prev === index ? null : index);
-  };
   const boostTimeoutRef = useRef(null);
   const cssBooostTimeoutRef = useRef(null);
+  const resetTimeoutRef = useRef(null);
+  const hasAutoFeaturedRef = useRef(false);
+  const scrollSwapTimeoutRef = useRef(null);
+  const featuredIndexRef = useRef(null);
+  const cardRefs = useRef([]);
   const introRef = useRef(null);
   const workRef = useRef(null);
   const canvasRef = useRef(null);
@@ -372,6 +390,15 @@ function App() {
     }, 900);
   };
 
+  const triggerBlackholeReset = () => {
+    setIsResetting(true);
+    if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+    resetTimeoutRef.current = setTimeout(() => {
+      setIsResetting(false);
+      resetTimeoutRef.current = null;
+    }, 3800);
+  };
+
   const handleBlackholeEnter = () => {
     setIsHovered(true);
   };
@@ -383,7 +410,7 @@ function App() {
   const handleBlackholeKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      triggerBoost();
+      triggerBlackholeReset();
     }
   };
 
@@ -397,7 +424,71 @@ function App() {
     return () => {
       if (boostTimeoutRef.current) clearTimeout(boostTimeoutRef.current);
       if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
+      if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (featuredIndexRef.current !== null && workRef.current && !workRef.current.contains(e.target)) {
+        setFeaturedIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    const section = workRef.current;
+    if (!section) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAutoFeaturedRef.current) {
+          hasAutoFeaturedRef.current = true;
+          setTimeout(() => setFeaturedIndex(0), 180);
+        }
+      },
+      { threshold: 0.22 }
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    featuredIndexRef.current = featuredIndex;
+  }, [featuredIndex]);
+
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    const SWAP_DELAY = 120;
+    const ratios = new Array(workItems.length).fill(0);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          const idx = Number(entry.target.dataset.cardIndex);
+          if (!isNaN(idx)) ratios[idx] = entry.intersectionRatio;
+        });
+
+        let bestIdx = -1;
+        let bestRatio = 0.15;
+        ratios.forEach((r, i) => {
+          if (r > bestRatio) { bestRatio = r; bestIdx = i; }
+        });
+
+        if (bestIdx !== -1 && bestIdx !== featuredIndexRef.current && featuredIndexRef.current !== null) {
+          clearTimeout(scrollSwapTimeoutRef.current);
+          scrollSwapTimeoutRef.current = setTimeout(() => {
+            setFeaturedIndex(bestIdx);
+          }, SWAP_DELAY);
+        }
+      },
+      { threshold: [0.1, 0.3, 0.5, 0.7, 0.9], rootMargin: '-8% 0px -8% 0px' }
+    );
+
+    cardRefs.current.forEach(ref => { if (ref) observer.observe(ref); });
+    return () => { observer.disconnect(); clearTimeout(scrollSwapTimeoutRef.current); };
   }, []);
 
   useEffect(() => {
@@ -517,17 +608,17 @@ function App() {
       </div>
       <section ref={introRef} className="intro-section">
       <div
-        className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''} ${isBoosted ? 'blackhole-boost' : ''}`}
+        className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''}`}
         role="button"
         tabIndex={0}
-        aria-label="Activate black hole spin burst"
+        aria-label="Slow down and restart black hole"
         onMouseEnter={handleBlackholeEnter}
         onPointerMove={handleBlackholePointerMove}
         onPointerLeave={handleBlackholePointerLeave}
-        onClick={triggerBoost}
+        onClick={triggerBlackholeReset}
         onKeyDown={handleBlackholeKeyDown}
       >
-        <ShaderBlackHole isBoosted={isBoosted} isHovered={isHovered} />
+        <ShaderBlackHole isResetting={isResetting} isHovered={isHovered} />
       </div>
       <h1>Welcome to my portfolio!</h1>
       <h2>Thanks for visiting!</h2>
@@ -538,67 +629,90 @@ function App() {
       </section>
       <section ref={workRef} className="work-table-section" aria-label="Work highlights">
         <h3>Work Highlights</h3>
-        <div className="work-list">
-          {workItems.map((item, index) => {
-            const isExpanded = expandedIndex === index;
-            return (
-              <Card
-                component="article"
-                key={item.title}
-                className={`work-item${isExpanded ? ' work-item-expanded' : ''}`}
-                data-category={item.category}
-                elevation={0}
-                style={{ animationDelay: `${index * 75}ms` }}
-                onPointerMove={handleCardPointerMove}
-                onPointerLeave={handleCardPointerLeave}
-              >
-                <CardActionArea
-                  className="work-item-header"
-                  aria-expanded={isExpanded}
-                  onClick={() => toggleExpand(index)}
+        <div className={`work-layout${featuredIndex !== null ? ' work-layout--split' : ''}`}>
+          {featuredIndex !== null && (
+            <div className="work-featured-panel" key={featuredIndex} data-category={workItems[featuredIndex].category}>
+              <div className="work-featured-image-placeholder" aria-hidden="true">
+                <span>Image placeholder</span>
+              </div>
+              <div className="work-featured-body">
+                <Typography component="span" className="work-item-category">
+                  {workItems[featuredIndex].category}
+                </Typography>
+                <Typography component="h4" className="work-featured-title">
+                  {workItems[featuredIndex].title}
+                </Typography>
+                <Typography component="p" className="work-featured-subtitle">
+                  {workItems[featuredIndex].subtitle}
+                </Typography>
+                <Box className="work-item-tags" style={{ justifyContent: 'flex-start', marginTop: '10px' }}>
+                  {workItems[featuredIndex].tags.map(tag => (
+                    <Chip key={tag} label={tag} size="small" className="work-tag" />
+                  ))}
+                </Box>
+                <p className="work-featured-details">{workItems[featuredIndex].details}</p>
+                {workItems[featuredIndex].repoUrl && (
+                  <Button
+                    component="a"
+                    href={workItems[featuredIndex].repoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="work-repo-btn"
+                  >
+                    View Repository
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+          <div className={`work-list${featuredIndex !== null ? ' work-list--sidebar' : ''}`}>
+            {workItems.map((item, index) => {
+              const isFeatured = featuredIndex === index;
+              return (
+                <Card
+                  component="article"
+                  key={item.title}
+                  ref={el => { cardRefs.current[index] = el; }}
+                  data-card-index={index}
+                  className={`work-item${isFeatured ? ' work-item-featured' : ''}`}
+                  data-category={item.category}
+                  elevation={0}
+                  style={{ animationDelay: `${index * 75}ms` }}
+                  onPointerMove={handleCardPointerMove}
+                  onPointerLeave={handleCardPointerLeave}
                 >
-                  <Box className="work-item-meta">
-                    <Typography component="span" className="work-item-category">
-                      {item.category}
-                    </Typography>
-                    <Typography component="h4" className="work-item-title">
-                      {item.title}
-                    </Typography>
-                    <Typography component="span" className="work-item-subtitle">
-                      {item.subtitle}
-                    </Typography>
-                  </Box>
-                  <Box className="work-item-right">
-                    <Box className="work-item-tags">
-                      {item.tags.map(tag => (
-                        <Chip key={tag} label={tag} size="small" className="work-tag" />
-                      ))}
+                  <CardActionArea
+                    className="work-item-header"
+                    aria-selected={isFeatured}
+                    onMouseEnter={() => setFeaturedIndex(index)}
+                    onClick={() => setFeaturedIndex(isFeatured ? null : index)}
+                  >
+                    <Box className="work-item-meta">
+                      <Typography component="span" className="work-item-category">
+                        {item.category}
+                      </Typography>
+                      <Typography component="h4" className="work-item-title">
+                        {item.title}
+                      </Typography>
+                      <Typography component="span" className="work-item-subtitle">
+                        {item.subtitle}
+                      </Typography>
                     </Box>
-                    <Typography component="span" className="work-item-toggle" aria-hidden="true">
-                      {isExpanded ? '-' : '+'}
-                    </Typography>
-                  </Box>
-                </CardActionArea>
-                <div className={`work-item-body${isExpanded ? ' expanded' : ''}`}>
-                  <CardContent className="work-item-body-content">
-                    <p>{item.details}</p>
-                    {item.repoUrl && (
-                      <Button
-                        component="a"
-                        href={item.repoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="work-repo-btn"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View Repository
-                      </Button>
-                    )}
-                  </CardContent>
-                </div>
-              </Card>
-            );
-          })}
+                    <Box className="work-item-right">
+                      <Box className="work-item-tags">
+                        {item.tags.map(tag => (
+                          <Chip key={tag} label={tag} size="small" className="work-tag" />
+                        ))}
+                      </Box>
+                      <Typography component="span" className="work-item-toggle" aria-hidden="true">
+                        {isFeatured ? '×' : '+'}
+                      </Typography>
+                    </Box>
+                  </CardActionArea>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </section>
       <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '72px', marginBottom: '48px' }}>
