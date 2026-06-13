@@ -19,7 +19,7 @@ body {
 }
 
 .App {
-  width: min(960px, 94vw);
+  width: min(1280px, 96vw);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -101,6 +101,57 @@ body {
   perspective: 900px;
   transform-style: preserve-3d;
   transform: translateZ(0);
+}
+
+.blackhole-shader {
+  width: min(620px, 88vw);
+  height: min(350px, 50vw);
+  min-height: 250px;
+  border-radius: 18px;
+  background: transparent;
+  overflow: visible;
+  animation: shader-frame-pulse 5.8s ease-in-out infinite;
+}
+
+.blackhole-shader::before {
+  inset: -8%;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 0 50%, rgba(132, 74, 218, 0.08) 66%, rgba(0, 0, 0, 0) 86%);
+  filter: blur(18px);
+  opacity: 0.8;
+  z-index: 2;
+}
+
+.blackhole-shader::after {
+  inset: -2%;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0 62%, rgba(0, 0, 0, 0.2) 74%, rgba(0, 0, 0, 0) 91%);
+  filter: blur(8px);
+  opacity: 0.9;
+  z-index: 3;
+}
+
+.shader-blackhole-canvas {
+  position: absolute;
+  inset: -8%;
+  z-index: 1;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.shader-blackhole-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.04);
+}
+
+@keyframes shader-frame-pulse {
+  0%   { filter: saturate(1) brightness(1); }
+  50%  { filter: saturate(1.16) brightness(1.06); }
+  100% { filter: saturate(1) brightness(1); }
 }
 
 .blackhole::before {
@@ -572,7 +623,7 @@ h2 {
 }
 
 .work-table-section {
-  width: min(900px, 92vw);
+  width: 100%;
   margin-top: 34px;
   padding: 18px;
   border: 1px solid rgba(172, 184, 206, 0.35);
@@ -595,6 +646,105 @@ h2 {
   gap: 12px;
 }
 
+.work-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.work-layout--split {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+.work-featured-panel {
+  position: sticky;
+  top: 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(172, 184, 206, 0.2);
+  background: rgba(8, 12, 22, 0.76);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  animation: featured-spin-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.work-featured-image-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, rgba(62, 25, 102, 0.22), rgba(8, 12, 28, 0.16));
+  border-bottom: 1px solid rgba(172, 184, 206, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(180, 180, 210, 0.26);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.work-featured-body {
+  padding: 22px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.work-featured-title {
+  margin: 4px 0 2px;
+  font-family: inherit !important;
+  font-size: 1.45rem !important;
+  font-weight: 900 !important;
+  color: #f5edff !important;
+  line-height: 1.22;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 22px rgba(194, 156, 255, 0.22);
+}
+
+.work-featured-subtitle {
+  font-family: inherit !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  color: rgba(180, 190, 215, 0.68) !important;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.work-featured-details {
+  margin: 12px 0 16px;
+  color: #c8d1e0;
+  line-height: 1.64;
+  font-size: 0.9rem;
+}
+
+@keyframes featured-spin-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(-14deg) translateX(-28px) scale(0.93);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) rotateY(0deg) translateX(0) scale(1);
+  }
+}
+
+.work-item-featured {
+  border-left-color: rgba(206, 147, 216, 0.9) !important;
+  background: linear-gradient(135deg, rgba(38, 18, 68, 0.7), rgba(14, 10, 28, 0.62)) !important;
+}
+
+.work-list--sidebar .work-item-header {
+  padding: 13px 18px !important;
+  gap: 10px;
+}
+
+.work-list--sidebar .work-item-subtitle {
+  display: none;
+}
+
+.work-list--sidebar .work-item-tags {
+  display: none;
+}
+
 @keyframes card-enter {
   from {
     opacity: 0;
@@ -615,7 +765,7 @@ h2 {
   --grav-light-x: 50%;
   --grav-light-y: 50%;
   position: relative;
-  margin-block: 4px;
+  margin-block: 4Can px;
   border-radius: 10px;
   border: 1px solid rgba(172, 184, 206, 0.18);
   border-left: 3px solid rgba(190, 141, 255, 0.55);
@@ -876,11 +1026,37 @@ h2 {
   .App {
     min-height: 100vh;
     padding: 24px 0 32px;
+    width: 100vw;
   }
 
   .blackhole {
     width: min(330px, 82vw);
     height: min(330px, 82vw);
+  }
+
+  .work-table-section {
+    width: 100%;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    padding: 16px 12px;
+  }
+
+  .work-layout--split {
+    grid-template-columns: 1fr;
+  }
+
+  .work-featured-panel {
+    position: static;
+  }
+
+  .work-list--sidebar .work-item-header {
+    padding: 14px 16px !important;
+  }
+
+  .work-list--sidebar .work-item-subtitle,
+  .work-list--sidebar .work-item-tags {
+    display: block;
   }
 
   .work-item-header {
