@@ -1,5 +1,5 @@
 import './App.css';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -7,6 +7,7 @@ import CardActionArea from '@mui/material/CardActionArea';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import * as THREE from 'three';
+import { playBlackholeSound, playCardHoverSound, unlockAudio } from './sounds';
 
 const blackHoleVertexShader = `
   void main() {
@@ -232,13 +233,17 @@ function App() {
   const [isCssHovered, setIsCssHovered] = useState(false);
   const [isCssBoosted, setIsCssBoosted] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
 
   const cssBooostTimeoutRef = useRef(null);
   const resetTimeoutRef = useRef(null);
-  const hasAutoFeaturedRef = useRef(false);
-  const scrollSwapTimeoutRef = useRef(null);
   const featuredIndexRef = useRef(null);
   const cardRefs = useRef([]);
+  const hasAutoFeaturedRef = useRef(false);
+  const featuredPanelRef = useRef(null);
+  const shouldScrollToFeaturedRef = useRef(false);
   const introRef = useRef(null);
   const workRef = useRef(null);
   const canvasRef = useRef(null);
@@ -368,6 +373,7 @@ function App() {
   };
 
   const triggerCssBoost = () => {
+    playBlackholeSound();
     setIsCssBoosted(true);
     if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
     cssBooostTimeoutRef.current = setTimeout(() => {
@@ -377,6 +383,7 @@ function App() {
   };
 
   const triggerBlackholeReset = () => {
+    playBlackholeSound();
     setIsResetting(true);
     if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
     resetTimeoutRef.current = setTimeout(() => {
@@ -414,6 +421,23 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (featuredIndexRef.current !== null && workRef.current && !workRef.current.contains(e.target)) {
         setFeaturedIndex(null);
@@ -424,59 +448,37 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    featuredIndexRef.current = featuredIndex;
+  }, [featuredIndex]);
+
+  // Mobile only: auto-open the first card's preview when the work section scrolls into view.
+  useEffect(() => {
+    if (!isMobile) return undefined;
     const section = workRef.current;
-    if (!section) return;
+    if (!section) return undefined;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAutoFeaturedRef.current) {
           hasAutoFeaturedRef.current = true;
-          setTimeout(() => setFeaturedIndex(0), 180);
+          setFeaturedIndex(0);
         }
       },
       { threshold: 0.22 }
     );
     observer.observe(section);
     return () => observer.disconnect();
-  }, []);
+  }, [isMobile]);
 
+  // Mobile only: smooth-scroll to the inline preview when the user taps a card.
   useEffect(() => {
-    featuredIndexRef.current = featuredIndex;
-  }, [featuredIndex]);
-
-  useEffect(() => {
-    if (!window.matchMedia('(max-width: 768px)').matches) return;
-    const SWAP_DELAY = 120;
-    const ratios = new Array(workItems.length).fill(0);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          const idx = Number(entry.target.dataset.cardIndex);
-          if (!isNaN(idx)) ratios[idx] = entry.intersectionRatio;
-        });
-
-        let bestIdx = -1;
-        let bestRatio = 0.15;
-        ratios.forEach((r, i) => {
-          if (r > bestRatio) { bestRatio = r; bestIdx = i; }
-        });
-
-        if (bestIdx !== -1 && bestIdx !== featuredIndexRef.current && featuredIndexRef.current !== null) {
-          clearTimeout(scrollSwapTimeoutRef.current);
-          scrollSwapTimeoutRef.current = setTimeout(() => {
-            setFeaturedIndex(bestIdx);
-          }, SWAP_DELAY);
-        }
-      },
-      { threshold: [0.1, 0.3, 0.5, 0.7, 0.9], rootMargin: '-8% 0px -8% 0px' }
-    );
-
-    cardRefs.current.forEach(ref => { if (ref) observer.observe(ref); });
-    return () => { observer.disconnect(); clearTimeout(scrollSwapTimeoutRef.current); };
-  // workItems.length is constant for the lifetime of the component
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!isMobile || featuredIndex === null) return;
+    if (!shouldScrollToFeaturedRef.current) return;
+    shouldScrollToFeaturedRef.current = false;
+    const panel = featuredPanelRef.current;
+    if (panel && typeof panel.scrollIntoView === 'function') {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [featuredIndex, isMobile]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -586,6 +588,45 @@ function App() {
     };
   }, []);
 
+  const renderFeaturedPanel = (index) => {
+    const item = workItems[index];
+    return (
+      <div className="work-featured-panel" key={`featured-${index}`} ref={featuredPanelRef} data-category={item.category}>
+        <div className="work-featured-image-placeholder" aria-hidden="true">
+          <span>Image placeholder</span>
+        </div>
+        <div className="work-featured-body">
+          <Typography component="span" className="work-item-category">
+            {item.category}
+          </Typography>
+          <Typography component="h4" className="work-featured-title">
+            {item.title}
+          </Typography>
+          <Typography component="p" className="work-featured-subtitle">
+            {item.subtitle}
+          </Typography>
+          <Box className="work-item-tags" style={{ justifyContent: 'flex-start', marginTop: '10px' }}>
+            {item.tags.map(tag => (
+              <Chip key={tag} label={tag} size="small" className="work-tag" />
+            ))}
+          </Box>
+          <p className="work-featured-details">{item.details}</p>
+          {item.repoUrl && (
+            <Button
+              component="a"
+              href={item.repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="work-repo-btn"
+            >
+              View Repository
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="App">
       <canvas ref={canvasRef} className="particle-canvas" aria-hidden="true" />
@@ -616,49 +657,15 @@ function App() {
       </section>
       <section ref={workRef} className="work-table-section" aria-label="Work highlights">
         <h3>Work Highlights</h3>
-        <div className={`work-layout${featuredIndex !== null ? ' work-layout--split' : ''}`}>
-          {featuredIndex !== null && (
-            <div className="work-featured-panel" key={featuredIndex} data-category={workItems[featuredIndex].category}>
-              <div className="work-featured-image-placeholder" aria-hidden="true">
-                <span>Image placeholder</span>
-              </div>
-              <div className="work-featured-body">
-                <Typography component="span" className="work-item-category">
-                  {workItems[featuredIndex].category}
-                </Typography>
-                <Typography component="h4" className="work-featured-title">
-                  {workItems[featuredIndex].title}
-                </Typography>
-                <Typography component="p" className="work-featured-subtitle">
-                  {workItems[featuredIndex].subtitle}
-                </Typography>
-                <Box className="work-item-tags" style={{ justifyContent: 'flex-start', marginTop: '10px' }}>
-                  {workItems[featuredIndex].tags.map(tag => (
-                    <Chip key={tag} label={tag} size="small" className="work-tag" />
-                  ))}
-                </Box>
-                <p className="work-featured-details">{workItems[featuredIndex].details}</p>
-                {workItems[featuredIndex].repoUrl && (
-                  <Button
-                    component="a"
-                    href={workItems[featuredIndex].repoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="work-repo-btn"
-                  >
-                    View Repository
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-          <div className={`work-list${featuredIndex !== null ? ' work-list--sidebar' : ''}`}>
+        <div className={`work-layout${featuredIndex !== null && !isMobile ? ' work-layout--split' : ''}`}>
+          {!isMobile && featuredIndex !== null && renderFeaturedPanel(featuredIndex)}
+          <div className={`work-list${featuredIndex !== null && !isMobile ? ' work-list--sidebar' : ''}`}>
             {workItems.map((item, index) => {
               const isFeatured = featuredIndex === index;
               return (
+                <Fragment key={item.title}>
                 <Card
                   component="article"
-                  key={item.title}
                   ref={el => { cardRefs.current[index] = el; }}
                   data-card-index={index}
                   className={`work-item${isFeatured ? ' work-item-featured' : ''}`}
@@ -671,8 +678,15 @@ function App() {
                   <CardActionArea
                     className="work-item-header"
                     aria-selected={isFeatured}
-                    onMouseEnter={() => setFeaturedIndex(index)}
-                    onClick={() => setFeaturedIndex(isFeatured ? null : index)}
+                    onMouseEnter={() => { if (!isMobile) { playCardHoverSound(); setFeaturedIndex(index); } }}
+                    onClick={() => {
+                      if (isFeatured) {
+                        setFeaturedIndex(null);
+                      } else {
+                        if (isMobile) shouldScrollToFeaturedRef.current = true;
+                        setFeaturedIndex(index);
+                      }
+                    }}
                   >
                     <Box className="work-item-meta">
                       <Typography component="span" className="work-item-category">
@@ -697,6 +711,8 @@ function App() {
                     </Box>
                   </CardActionArea>
                 </Card>
+                {isMobile && isFeatured && renderFeaturedPanel(index)}
+                </Fragment>
               );
             })}
           </div>
