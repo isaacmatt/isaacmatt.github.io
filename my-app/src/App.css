@@ -774,7 +774,7 @@ h2 {
   --grav-light-x: 50%;
   --grav-light-y: 50%;
   position: relative;
-  margin-block: 4Can px;
+  margin-block: 4px;
   border-radius: 10px;
   border: 1px solid rgba(172, 184, 206, 0.18);
   border-left: 3px solid rgba(190, 141, 255, 0.55);
