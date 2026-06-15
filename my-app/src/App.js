@@ -9,6 +9,29 @@ import Typography from '@mui/material/Typography';
 import * as THREE from 'three';
 import { playBlackholeSound, playCardHoverSound, unlockAudio } from './sounds';
 
+// Set this to your Cloudinary "cloud name" (Dashboard → Account Details).
+// Until it is set, cards fall back to the image placeholder.
+const CLOUDINARY_CLOUD = 'drqu9wqpo';
+
+// Builds a delivery URL that asks Cloudinary for a resized, auto-compressed,
+// auto-format (WebP/AVIF) derivative. The raw original is never delivered.
+// Accepts either a bare public ID ('My_Image_abc123') or a full Cloudinary URL
+// pasted from the dashboard; in both cases our transformations are injected.
+const cloudinaryUrl = (image, width) => {
+  const marker = '/image/upload/';
+  const idx = image.indexOf(marker);
+  // For a full URL, keep everything after /upload/ (version + id + extension);
+  // for a bare ID, use it as-is.
+  const tail = idx === -1 ? image : image.slice(idx + marker.length);
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/` +
+    `f_auto,q_auto:best,c_fill,ar_16:9,w_${width}/${tail}`;
+};
+
+// Candidate widths for the srcset so the browser downloads the smallest
+// version that fits the slot on the current screen / pixel density.
+// Upper widths cover high-DPI (retina) displays so detailed photos stay sharp.
+const IMAGE_WIDTHS = [640, 960, 1280, 1920];
+
 const blackHoleVertexShader = `
   void main() {
     gl_Position = vec4(position.xy, 0.0, 1.0);
@@ -261,6 +284,8 @@ function App() {
       tags: ['React', 'GitHub Pages', 'Responsive UI'],
       category: 'web',
       repoUrl: 'https://github.com/isaacmatt/TestWebPage_Alpha',
+      // Cloudinary public ID, e.g. 'eternal-void/testwebpage-alpha'. Leave '' to show the placeholder.
+      image: 'https://res.cloudinary.com/drqu9wqpo/image/upload/v1781548397/TestWebPage_Feature_Image_msi7rn.png',
     },
     {
       title: 'AI Municipal Issue Router',
@@ -269,6 +294,7 @@ function App() {
       tags: ['AI', 'IBM watsonx', 'Python', 'Agentic'],
       category: 'ai',
       repoUrl: 'https://github.com/isaacmatt/IBM_watsonx-Hackathon-Orchestrate',
+      image: '',
     },
     {
       title: 'Modular Motor Control Framework',
@@ -277,6 +303,7 @@ function App() {
       tags: ['C++', 'Arduino', 'Embedded', 'OOP'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/MotorCode',
+      image: 'https://res.cloudinary.com/drqu9wqpo/image/upload/v1781548397/Motor_Control_Feature_Image_mulsut.jpg',
     },
     {
       title: 'Wireless + I2C Hybrid Comms',
@@ -285,6 +312,7 @@ function App() {
       tags: ['C++', 'I2C', 'Wireless', 'Embedded'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/Micro_Comms',
+      image: '',
     },
     {
       title: 'Raspberry Pi Pico W WiFi Module',
@@ -293,6 +321,7 @@ function App() {
       tags: ['Pico W', 'WiFi', 'Embedded', 'MicroPython'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/RaspberryPi_WifiManager',
+      image: 'https://res.cloudinary.com/drqu9wqpo/image/upload/v1781548397/Wifi_Dashboard_Feature_Image_bzabim.png',
     },
     {
       title: 'SD Card PCB Design',
@@ -301,6 +330,7 @@ function App() {
       tags: ['PCB Design', 'SD Card', 'KiCad', 'Hardware'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/SD_Card_Breakout_Board',
+      image: '',
     },
     {
       title: 'ML Pothole Detection System',
@@ -309,6 +339,7 @@ function App() {
       tags: ['Python', 'PyTorch', 'YOLO', 'OpenCV'],
       category: 'ml',
       repoUrl: 'https://github.com/isaacmatt/2025ECE_CapstoneG12',
+      image: 'https://res.cloudinary.com/drqu9wqpo/image/upload/v1781548396/ML_CV_Detection_Feature_Image_qr4ci6.png',
     },
     {
       title: 'Creative Systems Portfolio',
@@ -317,6 +348,7 @@ function App() {
       tags: ['React', 'Creative', 'Generative'],
       category: 'creative',
       repoUrl: 'https://github.com/isaacmatt/eternal-infinite-void',
+      image: 'https://res.cloudinary.com/drqu9wqpo/image/upload/v1781547970/Portfolio_Feature_Image_ej77dq.png',
     },
   ];
 
@@ -592,9 +624,25 @@ function App() {
     const item = workItems[index];
     return (
       <div className="work-featured-panel" key={`featured-${index}`} ref={featuredPanelRef} data-category={item.category}>
-        <div className="work-featured-image-placeholder" aria-hidden="true">
-          <span>Image placeholder</span>
-        </div>
+        {CLOUDINARY_CLOUD && item.image ? (
+          <img
+            className="work-featured-image"
+            src={cloudinaryUrl(item.image, 1280)}
+            srcSet={IMAGE_WIDTHS
+              .map(w => `${cloudinaryUrl(item.image, w)} ${w}w`)
+              .join(', ')}
+            sizes="(max-width: 768px) 96vw, 520px"
+            width="1280"
+            height="720"
+            loading="lazy"
+            decoding="async"
+            alt={`${item.title} preview`}
+          />
+        ) : (
+          <div className="work-featured-image-placeholder" aria-hidden="true">
+            <span>Image placeholder</span>
+          </div>
+        )}
         <div className="work-featured-body">
           <Typography component="span" className="work-item-category">
             {item.category}

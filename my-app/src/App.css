@@ -668,6 +668,15 @@ h2 {
   animation: featured-spin-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.work-featured-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-bottom: 1px solid rgba(172, 184, 206, 0.1);
+  background: rgba(8, 12, 28, 0.16);
+}
+
 .work-featured-image-placeholder {
   width: 100%;
   aspect-ratio: 16 / 9;
