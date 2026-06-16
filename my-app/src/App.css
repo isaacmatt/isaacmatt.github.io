@@ -616,6 +616,79 @@ h2 {
   margin: 0 0 26px;
 }
 
+.site-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 44px;
+  max-width: 760px;
+}
+
+.site-name {
+  font-size: 3em;
+  margin: 0 0 12px;
+  color: #f3ecff;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 24px rgba(165, 96, 247, 0.4);
+}
+
+.site-title {
+  margin: 0 0 8px;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #cdbcf0;
+  max-width: 640px;
+}
+
+.site-location {
+  margin: 0 0 22px;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(160, 170, 195, 0.7);
+}
+
+.site-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.contact-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 22px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(184, 148, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(62, 25, 102, 0.26);
+  color: #dfccff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.contact-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(99, 41, 168, 0.35);
+  box-shadow: 0 0 16px rgba(145, 84, 221, 0.35);
+}
+
+.contact-btn:focus-visible {
+  outline: 2px solid rgba(216, 188, 255, 0.85);
+  outline-offset: 3px;
+}
+
+.contact-btn--email {
+  background: rgba(99, 41, 168, 0.4);
+  border-color: rgba(206, 178, 255, 0.6);
+}
+
 .content-panel {
   margin-top: 28px;
   text-align: center;

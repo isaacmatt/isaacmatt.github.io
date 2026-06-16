@@ -1,6 +1,10 @@
-# Eternal Infinite Void Portfolio
+# Matt Isaac — Portfolio App
 
-This is a JavaScript portfolio app built with React. It presents a personal engineering portfolio with an interactive black hole intro, animated particle background, smooth section navigation, and expandable project cards for web, AI, machine learning, embedded systems, PCB design, and creative technical work.
+This is the React application behind my portfolio site. I'm an embedded firmware engineer focused on STM32, RTOS, and wireless IoT systems (Computer Engineering, University of Manitoba, based in Winnipeg, Canada). The site presents my engineering work with an interactive black hole intro, animated particle background, smooth section navigation, and expandable project cards for web, AI, machine learning, embedded systems, PCB design, and creative technical work.
+
+- LinkedIn: https://www.linkedin.com/in/matthew-i-7785b0277/
+- GitHub: https://github.com/isaacmatt
+- Email: matt.isaac.dev@gmail.com
 
 The app was developed as a collaborative frontend project, combining hands-on JavaScript and React implementation with AI-assisted design and iteration, including collaboration with Claude for UI ideas, copy refinement, and interactive behavior planning.
 
@@ -53,7 +57,7 @@ Builds and deploys the app to GitHub Pages using the configured `homepage` value
 
 The app is configured for deployment at:
 
-https://isaacmatt.github.io/eternal-infinite-void
+https://isaacmatt.github.io
 
 ## Collaboration Notes
 

@@ -273,8 +273,8 @@ function App() {
   const mouseRef = useRef({ x: -9999, y: -9999 });
 
   const aboutSection = {
-    title: 'About Me',
-    body: 'I build software systems that bridge low-level engineering with intelligent applications. My work spans backend development, real-time systems, and machine learning pipelines, with a focus on modular architecture, performance, and structured problem-solving. I enjoy designing reliable systems that operate under real-world constraints.',
+    title: 'About',
+    body: "I'm an embedded firmware and IoT engineer graduate in Computer Engineering at the University of Manitoba. I work close to the hardware with STM32, FreeRTOS, and C/C++, and build wireless systems over ESP-NOW, I2C, and Wi-Fi. My experience runs across the stack: firmware, PCB design in KiCad, and integrating embedded systems into working hardware. I'm currently looking for embedded firmware and IoT engineering roles.",
   };
   const workItems = [
     {
@@ -443,6 +443,12 @@ function App() {
     if (sectionRef.current && typeof sectionRef.current.scrollIntoView === 'function') {
       sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  // Email kept out of the static markup; the address is assembled in JS so the
+  // mailto only materializes on real user interaction (hover/focus/click).
+  const revealEmail = (event) => {
+    event.currentTarget.href = `mailto:${['matt.isaac.dev', 'gmail.com'].join('@')}`;
   };
 
   useEffect(() => {
@@ -696,8 +702,41 @@ function App() {
       >
         <ShaderBlackHole isResetting={isResetting} isHovered={isHovered} />
       </div>
-      <h1>Welcome to my portfolio!</h1>
-      <h2>Thanks for visiting!</h2>
+      <header className="site-header">
+        <h1 className="site-name">Matthew Isaac</h1>
+        <p className="site-title">
+          Embedded firmware engineer focused on STM32, RTOS, and wireless IoT
+          systems. Computer Engineering, University of Manitoba.
+        </p>
+        <p className="site-location">Winnipeg, Manitoba, Canada</p>
+        <nav className="site-contact" aria-label="Contact links">
+          <a
+            className="contact-btn"
+            href="https://www.linkedin.com/in/matthew-i-7785b0277/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            LinkedIn
+          </a>
+          <a
+            className="contact-btn"
+            href="https://github.com/isaacmatt"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+          <a
+            className="contact-btn contact-btn--email"
+            href="#contact"
+            onClick={revealEmail}
+            onMouseEnter={revealEmail}
+            onFocus={revealEmail}
+          >
+            Email Me
+          </a>
+        </nav>
+      </header>
       <section className="content-panel" aria-live="polite">
         <h3>{aboutSection.title}</h3>
         <p>{aboutSection.body}</p>
