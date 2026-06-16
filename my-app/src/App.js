@@ -32,6 +32,30 @@ const cloudinaryUrl = (image, width) => {
 // Upper widths cover high-DPI (retina) displays so detailed photos stay sharp.
 const IMAGE_WIDTHS = [640, 960, 1280, 1920];
 
+// Builds a Cloudinary VIDEO delivery URL (note: /video/upload/, not /image/).
+// Same idea as cloudinaryUrl — accepts a bare public ID or a full pasted URL —
+// but uses video transforms (vc_auto picks an efficient codec; f_auto serves
+// WebM/MP4 per browser). The raw original is never delivered.
+const cloudinaryVideoUrl = (video, width) => {
+  const marker = '/video/upload/';
+  const idx = video.indexOf(marker);
+  const tail = idx === -1 ? video : video.slice(idx + marker.length);
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/video/upload/` +
+    `f_auto,q_auto,vc_auto,c_fill,ar_16:9,w_${width}/${tail}`;
+};
+
+// A still frame from the same video, served as an image, used as the <video>
+// poster so something sharp shows while the clip loads. Requesting the video
+// with a .jpg extension makes Cloudinary return a generated frame.
+const cloudinaryVideoPoster = (video, width) => {
+  const marker = '/video/upload/';
+  const idx = video.indexOf(marker);
+  const tail = (idx === -1 ? video : video.slice(idx + marker.length))
+    .replace(/\.[a-z0-9]+$/i, '.jpg');
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/video/upload/` +
+    `f_auto,q_auto,c_fill,ar_16:9,w_${width}/${tail}`;
+};
+
 const blackHoleVertexShader = `
   void main() {
     gl_Position = vec4(position.xy, 0.0, 1.0);
@@ -330,7 +354,10 @@ function App() {
       tags: ['KiCad', 'PCB Design', 'Schematic Capture', 'Hardware'],
       category: 'hardware',
       repoUrl: 'https://github.com/isaacmatt/SD_Card_Breakout_Board',
+      // Cloudinary video public ID or full /video/upload/ URL. Autoplays muted + loops.
+      // Set `video` for a clip, or `image` for a still — video takes precedence.
       image: '',
+      video: 'https://res.cloudinary.com/drqu9wqpo/video/upload/v1781649069/SD_Board_Feature_Video_pziode.mp4',
     },
     {
       title: 'ML Pothole Detection System',
@@ -630,7 +657,21 @@ function App() {
     const item = workItems[index];
     return (
       <div className="work-featured-panel" key={`featured-${index}`} ref={featuredPanelRef} data-category={item.category}>
-        {CLOUDINARY_CLOUD && item.image ? (
+        {CLOUDINARY_CLOUD && item.video ? (
+          <video
+            className="work-featured-image"
+            src={cloudinaryVideoUrl(item.video, 1280)}
+            poster={cloudinaryVideoPoster(item.video, 1280)}
+            width="1280"
+            height="720"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            aria-label={`${item.title} preview`}
+          />
+        ) : CLOUDINARY_CLOUD && item.image ? (
           <img
             className="work-featured-image"
             src={cloudinaryUrl(item.image, 1280)}
