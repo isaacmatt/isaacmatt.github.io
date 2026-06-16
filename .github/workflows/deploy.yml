@@ -1,0 +1,80 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Allow the deploy action to push the built site to the gh-pages branch.
+permissions:
+  contents: write
+
+# If several pushes land quickly, let the newest one win instead of racing.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: my-app/package-lock.json
+
+      # The pinned puppeteer (1.20) bundles an ancient Chromium that won't launch
+      # on a modern runner, so we skip that download and prerender with the
+      # runner's pre-installed Google Chrome instead.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+
+      # Point react-snap at the runner's Chrome and pass the sandbox flags CI
+      # needs. Done here (not in committed package.json) so local dev is
+      # unaffected.
+      - name: Configure react-snap for CI Chrome
+        run: |
+          CHROME="$(command -v google-chrome-stable || command -v google-chrome)"
+          echo "Using Chrome at: $CHROME"
+          "$CHROME" --version
+          tmp="$(mktemp)"
+          jq --arg p "$CHROME" '.reactSnap = (.reactSnap // {}) + {
+            puppeteerExecutablePath: $p,
+            puppeteerArgs: ["--no-sandbox", "--disable-setuid-sandbox"]
+          }' package.json > "$tmp"
+          mv "$tmp" package.json
+
+      # CI=false so a stray ESLint warning doesn't fail the production build.
+      - name: Build (and prerender via postbuild react-snap)
+        run: npm run build
+        env:
+          CI: "false"
+
+      # Sanity-check that prerendering actually baked real content into the HTML.
+      - name: Verify static content
+        run: |
+          for term in "Matt Isaac" "ESP-NOW" "Micro_Comms"; do
+            if ! grep -q "$term" build/index.html; then
+              echo "::error::Expected '$term' in build/index.html but it was missing (prerender failed)"
+              exit 1
+            fi
+          done
+          echo "Prerender verification passed."
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./my-app/build
+          publish_branch: gh-pages
