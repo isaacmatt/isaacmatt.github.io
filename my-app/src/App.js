@@ -316,12 +316,8 @@ function App() {
       details: 'This site — a React SPA I designed and built to present my engineering work, with project filtering and a custom dark theme. System design and integration directed by me; implementation built with AI assistance.',
       tags: ['React', 'JavaScript', 'Frontend'],
       category: 'creative',
-<<<<<<< Updated upstream
-      repoUrl: 'https://github.com/isaacmatt/eternal-infinite-void',
-=======
       repoUrl: 'https://github.com/isaacmatt/eternal-infinite-void',  
       image: 'https://res.cloudinary.com/drqu9wqpo/image/upload/v1781547970/Portfolio_Feature_Image_ej77dq.png',
->>>>>>> Stashed changes
     },
   ];
 
