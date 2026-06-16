@@ -1,0 +1,45 @@
+name: CI - Build Check
+
+# Validates that the app compiles on every push to main and on PRs.
+# This does NOT deploy. Deployment is done manually with `npm run deploy`
+# from my-app, which prerenders via react-snap and publishes to gh-pages.
+# Keeping deploy out of CI avoids overwriting that prerendered build.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: my-app/package-lock.json
+
+      # react-snap pins an old puppeteer whose bundled Chromium we don't need
+      # here (we don't prerender in CI), so skip that slow/broken download.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+
+      # Call react-scripts directly so npm's `postbuild` (react-snap) does NOT
+      # run. CI=false so a stray ESLint warning doesn't fail the build.
+      - name: Build
+        run: npx react-scripts build
+        env:
+          CI: "false"
