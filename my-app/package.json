@@ -27,6 +27,12 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "reactSnap": {
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
   "eslintConfig": {
     "extends": [
       "react-app",
