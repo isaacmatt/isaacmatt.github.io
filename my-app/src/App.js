@@ -187,15 +187,44 @@ void main() {
 }
 `;
 
-function ShaderBlackHole({ isResetting, isHovered }) {
+// Drives the CSS "cursor light" custom properties on a .blackhole element from
+// the pointer position. Pure DOM with no React state, so it is shared at module
+// scope by both the shader hero and the CSS black hole.
+function handleBlackholePointerMove(event) {
+  const blackhole = event.currentTarget;
+  const rect = blackhole.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const dx = centerX - x;
+  const dy = centerY - y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const captureRadius = rect.width * 0.78;
+  const intensity = Math.max(0, Math.min(1, 1 - distance / captureRadius));
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  blackhole.style.setProperty('--cursor-x', `${x.toFixed(0)}px`);
+  blackhole.style.setProperty('--cursor-y', `${y.toFixed(0)}px`);
+  blackhole.style.setProperty('--light-angle', `${angle.toFixed(2)}deg`);
+  blackhole.style.setProperty('--light-length', `${Math.max(40, distance).toFixed(0)}px`);
+  blackhole.style.setProperty('--light-intensity', intensity.toFixed(2));
+}
+
+function ShaderBlackHole({ isResetting, isHovered, onError }) {
   const mountRef = useRef(null);
   const hoveredRef = useRef(isHovered);
   const isResettingRef = useRef(false);
   const resetStartTimeRef = useRef(null);
+  const onErrorRef = useRef(onError);
 
   useEffect(() => {
     hoveredRef.current = isHovered;
   }, [isHovered]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     if (isResetting && !isResettingRef.current) {
@@ -218,6 +247,10 @@ function ShaderBlackHole({ isResetting, isHovered }) {
       renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, premultipliedAlpha: false });
     } catch (err) {
       console.warn('WebGL unavailable; skipping shader black hole.', err);
+      // Tell the parent so it can swap in the CSS black hole fallback. Skipped
+      // during react-snap prerender (see App) so the snapshot stays the shader
+      // variant and clients hydrate against a consistent layout.
+      if (onErrorRef.current) onErrorRef.current();
       return undefined;
     }
     renderer.setPixelRatio(1);
@@ -328,17 +361,69 @@ function ShaderBlackHole({ isResetting, isHovered }) {
   return <div ref={mountRef} className="shader-blackhole-canvas" aria-hidden="true" />;
 }
 
+// Pure-CSS animated black hole. No WebGL — used as the second hero accent and as
+// the fallback for the shader hero when a WebGL context can't be created.
+function CssBlackHole() {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isBoosted, setIsBoosted] = useState(false);
+  const boostTimeoutRef = useRef(null);
+
+  useEffect(() => () => {
+    if (boostTimeoutRef.current) clearTimeout(boostTimeoutRef.current);
+  }, []);
+
+  const triggerBoost = () => {
+    playBlackholeSound();
+    setIsBoosted(true);
+    if (boostTimeoutRef.current) clearTimeout(boostTimeoutRef.current);
+    boostTimeoutRef.current = setTimeout(() => {
+      setIsBoosted(false);
+      boostTimeoutRef.current = null;
+    }, 900);
+  };
+
+  return (
+    <div
+      className={`blackhole${isHovered ? ' blackhole-hover' : ''}${isBoosted ? ' blackhole-boost' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label="Activate CSS black hole"
+      onMouseEnter={() => setIsHovered(true)}
+      onPointerMove={handleBlackholePointerMove}
+      onPointerLeave={(e) => { setIsHovered(false); e.currentTarget.style.setProperty('--light-intensity', '0'); }}
+      onClick={triggerBoost}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerBoost(); } }}
+    >
+      <div className="gravitational-lens" />
+      <div className="matter-cloud cloud-outer" />
+      <div className="matter-cloud cloud-inner" />
+      <div className="accretion-disk disk-back" />
+      <div className="accretion-disk disk-front" />
+      <div className="matter-plane" />
+      <div className="event-horizon">
+        <div className="singularity-glint" />
+      </div>
+      <div className="photon-shell" />
+      <div className="lensed-arc arc-top" />
+      <div className="lensed-arc arc-bottom" />
+      <div className="doppler-sweep" />
+      <div className="gravity-ripple ripple-one" />
+      <div className="gravity-ripple ripple-two" />
+      <div className="cursor-light" />
+    </div>
+  );
+}
+
 function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [featuredIndex, setFeaturedIndex] = useState(null);
-  const [isCssHovered, setIsCssHovered] = useState(false);
-  const [isCssBoosted, setIsCssBoosted] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
-  );
+  // Start from constants that match the prerendered (react-snap) snapshot, then
+  // correct after mount. Reading window/WebGL during the first render would make
+  // the client diverge from the static HTML and trigger a hydration mismatch.
+  const [isMobile, setIsMobile] = useState(false);
+  const [webglOk, setWebglOk] = useState(true);
 
-  const cssBooostTimeoutRef = useRef(null);
   const resetTimeoutRef = useRef(null);
   const featuredIndexRef = useRef(null);
   const cardRefs = useRef([]);
@@ -459,40 +544,18 @@ function App() {
     card.style.setProperty('--grav-glow', '0');
   };
 
-  const handleBlackholePointerMove = (event) => {
-    const blackhole = event.currentTarget;
-    const rect = blackhole.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    const dx = centerX - x;
-    const dy = centerY - y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const captureRadius = rect.width * 0.78;
-    const intensity = Math.max(0, Math.min(1, 1 - distance / captureRadius));
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-    blackhole.style.setProperty('--cursor-x', `${x.toFixed(0)}px`);
-    blackhole.style.setProperty('--cursor-y', `${y.toFixed(0)}px`);
-    blackhole.style.setProperty('--light-angle', `${angle.toFixed(2)}deg`);
-    blackhole.style.setProperty('--light-length', `${Math.max(40, distance).toFixed(0)}px`);
-    blackhole.style.setProperty('--light-intensity', intensity.toFixed(2));
-  };
-
   const handleBlackholePointerLeave = (event) => {
     handleBlackholeLeave();
     event.currentTarget.style.setProperty('--light-intensity', '0');
   };
 
-  const triggerCssBoost = () => {
-    playBlackholeSound();
-    setIsCssBoosted(true);
-    if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
-    cssBooostTimeoutRef.current = setTimeout(() => {
-      setIsCssBoosted(false);
-      cssBooostTimeoutRef.current = null;
-    }, 900);
+  // The shader calls this when WebGL can't initialize. Ignored during react-snap
+  // prerender so the static snapshot always contains the shader variant and
+  // every client hydrates against the same hero markup; real browsers without
+  // WebGL then swap to the CSS fallback after mount.
+  const handleWebglError = () => {
+    if (typeof navigator !== 'undefined' && navigator.userAgent === 'ReactSnap') return;
+    setWebglOk(false);
   };
 
   const triggerBlackholeReset = () => {
@@ -534,7 +597,6 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (cssBooostTimeoutRef.current) clearTimeout(cssBooostTimeoutRef.current);
       if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
     };
   }, []);
@@ -552,6 +614,7 @@ function App() {
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     const handler = (e) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
@@ -784,19 +847,23 @@ function App() {
         <button onClick={() => scrollToSection(workRef)}>Work</button>
       </div>
       <section ref={introRef} className="intro-section">
-      <div
-        className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''}`}
-        role="button"
-        tabIndex={0}
-        aria-label="Slow down and restart black hole"
-        onMouseEnter={handleBlackholeEnter}
-        onPointerMove={handleBlackholePointerMove}
-        onPointerLeave={handleBlackholePointerLeave}
-        onClick={triggerBlackholeReset}
-        onKeyDown={handleBlackholeKeyDown}
-      >
-        <ShaderBlackHole isResetting={isResetting} isHovered={isHovered} />
-      </div>
+      {webglOk ? (
+        <div
+          className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''}`}
+          role="button"
+          tabIndex={0}
+          aria-label="Slow down and restart black hole"
+          onMouseEnter={handleBlackholeEnter}
+          onPointerMove={handleBlackholePointerMove}
+          onPointerLeave={handleBlackholePointerLeave}
+          onClick={triggerBlackholeReset}
+          onKeyDown={handleBlackholeKeyDown}
+        >
+          <ShaderBlackHole isResetting={isResetting} isHovered={isHovered} onError={handleWebglError} />
+        </div>
+      ) : (
+        <CssBlackHole />
+      )}
       <header className="site-header">
         <h1 className="site-name">Matthew Isaac</h1>
         <p className="site-title">
@@ -901,34 +968,7 @@ function App() {
         </div>
       </section>
       <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '72px', marginBottom: '48px' }}>
-        <div
-          className={`blackhole${isCssHovered ? ' blackhole-hover' : ''}${isCssBoosted ? ' blackhole-boost' : ''}`}
-          role="button"
-          tabIndex={0}
-          aria-label="Activate CSS black hole"
-          onMouseEnter={() => setIsCssHovered(true)}
-          onPointerMove={handleBlackholePointerMove}
-          onPointerLeave={(e) => { setIsCssHovered(false); e.currentTarget.style.setProperty('--light-intensity', '0'); }}
-          onClick={triggerCssBoost}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerCssBoost(); } }}
-        >
-          <div className="gravitational-lens" />
-          <div className="matter-cloud cloud-outer" />
-          <div className="matter-cloud cloud-inner" />
-          <div className="accretion-disk disk-back" />
-          <div className="accretion-disk disk-front" />
-          <div className="matter-plane" />
-          <div className="event-horizon">
-            <div className="singularity-glint" />
-          </div>
-          <div className="photon-shell" />
-          <div className="lensed-arc arc-top" />
-          <div className="lensed-arc arc-bottom" />
-          <div className="doppler-sweep" />
-          <div className="gravity-ripple ripple-one" />
-          <div className="gravity-ripple ripple-two" />
-          <div className="cursor-light" />
-        </div>
+        <CssBlackHole />
       </section>
       <footer className="site-attribution" aria-label="Icon attribution">
         <p>
