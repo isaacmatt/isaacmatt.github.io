@@ -73,6 +73,7 @@ uniform float camElev;
 uniform vec3 diskColorInner;
 uniform vec3 diskColorOuter;
 uniform vec3 nebulaColor;
+uniform float maxSteps;
 
 #define STEPS 300
 #define RS 1.0
@@ -128,6 +129,9 @@ void main() {
   bool captured = false;
 
   for (int i = 0; i < STEPS; i++) {
+    // STEPS is the hard upper bound (loops need a constant limit in GLSL ES);
+    // maxSteps lets us trade march quality for speed at runtime.
+    if (float(i) >= maxSteps) break;
     float r = length(p);
     if (r < RS) {
       captured = true;
@@ -204,7 +208,18 @@ function ShaderBlackHole({ isResetting, isHovered }) {
     const container = mountRef.current;
     if (!container) return undefined;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, premultipliedAlpha: false });
+    // WebGL can be unavailable or blocked (e.g. Firefox with WebGL disabled,
+    // a blocklisted GPU/driver, or hardware acceleration off). Creating the
+    // renderer throws in that case; if we let it escape the effect, React
+    // unmounts the whole app and the page goes blank. Degrade gracefully
+    // instead — the CSS black hole below still renders.
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, premultipliedAlpha: false });
+    } catch (err) {
+      console.warn('WebGL unavailable; skipping shader black hole.', err);
+      return undefined;
+    }
     renderer.setPixelRatio(1);
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
@@ -221,6 +236,7 @@ function ShaderBlackHole({ isResetting, isHovered }) {
       diskColorInner: { value: new THREE.Vector3(0.92, 0.70, 1.00) },
       diskColorOuter: { value: new THREE.Vector3(0.45, 0.08, 0.85) },
       nebulaColor: { value: new THREE.Vector3(0.30, 0.05, 0.55) },
+      maxSteps: { value: 300 },
     };
     const material = new THREE.ShaderMaterial({
       uniforms,
@@ -230,16 +246,54 @@ function ShaderBlackHole({ isResetting, isHovered }) {
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
+    // Quality tiers, brightest/sharpest first. On sustained slow frames we step
+    // down: render the buffer at a fraction of the CSS size (the canvas is
+    // upscaled by CSS, so cost drops with the pixel count) and march fewer
+    // steps. We only ever downgrade, to avoid oscillating.
+    const QUALITY = [
+      { scale: 1.0, steps: 300 },
+      { scale: 0.75, steps: 230 },
+      { scale: 0.55, steps: 170 },
+    ];
+    let qualityLevel = 0;
+
     const resize = () => {
       const { clientWidth, clientHeight } = container;
-      renderer.setSize(clientWidth, clientHeight, false);
-      uniforms.iResolution.value.set(clientWidth, clientHeight);
+      const { scale, steps } = QUALITY[qualityLevel];
+      const w = Math.max(1, Math.round(clientWidth * scale));
+      const h = Math.max(1, Math.round(clientHeight * scale));
+      renderer.setSize(w, h, false);
+      uniforms.iResolution.value.set(w, h);
+      uniforms.maxSteps.value = steps;
     };
 
     let animationId;
     const start = performance.now();
+    let lastFrame = start;
+    let windowFrames = 0;
+    let slowFrames = 0;
     const animate = () => {
-      const elapsed = (performance.now() - start) / 1000;
+      const frameNow = performance.now();
+      const dt = frameNow - lastFrame;
+      lastFrame = frameNow;
+
+      // Sample frame pacing and drop quality if most frames in a ~1.5s window
+      // run slower than ~45fps. Skip the first second (warmup: shader compile,
+      // first paints) so a cold start doesn't trip the downgrade.
+      if (qualityLevel < QUALITY.length - 1 && frameNow - start > 1000) {
+        windowFrames++;
+        if (dt > 22) slowFrames++;
+        if (windowFrames >= 90) {
+          if (slowFrames > windowFrames * 0.5) {
+            qualityLevel++;
+            resize();
+          }
+          windowFrames = 0;
+          slowFrames = 0;
+        }
+      }
+
+      const elapsed = (frameNow - start) / 1000;
       uniforms.iTime.value = elapsed;
       let speed;
       if (isResettingRef.current && resetStartTimeRef.current !== null) {
