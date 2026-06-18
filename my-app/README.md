@@ -59,6 +59,10 @@ The app is configured for deployment at:
 
 https://isaacmatt.github.io
 
+## Known Issues
+
+- **WebGL black hole on Firefox:** The intro black hole is rendered with WebGL (Three.js). On some Firefox setups a WebGL context can't be created — typically when hardware acceleration is disabled or after a GPU driver update breaks Firefox's ANGLE/EGL path — and the console logs `WebGL unavailable; skipping shader black hole.` We're aware of this. The site degrades gracefully (the page still loads fully; the shader is simply skipped) rather than breaking, and the effect renders normally on Chrome and mobile browsers. Re-enabling hardware acceleration or reinstalling the GPU driver restores it.
+
 ## Collaboration Notes
 
 This project reflects an iterative development workflow using React and JavaScript as the core implementation tools. Claude was used as a collaborative assistant during parts of the process to explore interface direction, refine portfolio wording, and think through interactive presentation details, while the final app structure and implementation remain grounded in the repository's React code.
