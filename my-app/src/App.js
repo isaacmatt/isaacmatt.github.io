@@ -211,20 +211,15 @@ function handleBlackholePointerMove(event) {
   blackhole.style.setProperty('--light-intensity', intensity.toFixed(2));
 }
 
-function ShaderBlackHole({ isResetting, isHovered, onError }) {
+function ShaderBlackHole({ isResetting, isHovered }) {
   const mountRef = useRef(null);
   const hoveredRef = useRef(isHovered);
   const isResettingRef = useRef(false);
   const resetStartTimeRef = useRef(null);
-  const onErrorRef = useRef(onError);
 
   useEffect(() => {
     hoveredRef.current = isHovered;
   }, [isHovered]);
-
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
 
   useEffect(() => {
     if (isResetting && !isResettingRef.current) {
@@ -246,11 +241,12 @@ function ShaderBlackHole({ isResetting, isHovered, onError }) {
     try {
       renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, premultipliedAlpha: false });
     } catch (err) {
+      // WebGL may be unavailable or blocked (e.g. a browser with hardware
+      // acceleration off, a blocklisted GPU/driver). Degrade to an empty
+      // container rather than letting the throw escape the effect, which would
+      // unmount the whole app and blank the page. The ErrorBoundary in index.js
+      // is the last line of defense.
       console.warn('WebGL unavailable; skipping shader black hole.', err);
-      // Tell the parent so it can swap in the CSS black hole fallback. Skipped
-      // during react-snap prerender (see App) so the snapshot stays the shader
-      // variant and clients hydrate against a consistent layout.
-      if (onErrorRef.current) onErrorRef.current();
       return undefined;
     }
     renderer.setPixelRatio(1);
@@ -418,11 +414,10 @@ function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [featuredIndex, setFeaturedIndex] = useState(null);
   const [isResetting, setIsResetting] = useState(false);
-  // Start from constants that match the prerendered (react-snap) snapshot, then
-  // correct after mount. Reading window/WebGL during the first render would make
+  // Start from a constant that matches the prerendered (react-snap) snapshot,
+  // then correct after mount. Reading window during the first render would make
   // the client diverge from the static HTML and trigger a hydration mismatch.
   const [isMobile, setIsMobile] = useState(false);
-  const [webglOk, setWebglOk] = useState(true);
 
   const resetTimeoutRef = useRef(null);
   const featuredIndexRef = useRef(null);
@@ -547,15 +542,6 @@ function App() {
   const handleBlackholePointerLeave = (event) => {
     handleBlackholeLeave();
     event.currentTarget.style.setProperty('--light-intensity', '0');
-  };
-
-  // The shader calls this when WebGL can't initialize. Ignored during react-snap
-  // prerender so the static snapshot always contains the shader variant and
-  // every client hydrates against the same hero markup; real browsers without
-  // WebGL then swap to the CSS fallback after mount.
-  const handleWebglError = () => {
-    if (typeof navigator !== 'undefined' && navigator.userAgent === 'ReactSnap') return;
-    setWebglOk(false);
   };
 
   const triggerBlackholeReset = () => {
@@ -847,23 +833,19 @@ function App() {
         <button onClick={() => scrollToSection(workRef)}>Work</button>
       </div>
       <section ref={introRef} className="intro-section">
-      {webglOk ? (
-        <div
-          className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''}`}
-          role="button"
-          tabIndex={0}
-          aria-label="Slow down and restart black hole"
-          onMouseEnter={handleBlackholeEnter}
-          onPointerMove={handleBlackholePointerMove}
-          onPointerLeave={handleBlackholePointerLeave}
-          onClick={triggerBlackholeReset}
-          onKeyDown={handleBlackholeKeyDown}
-        >
-          <ShaderBlackHole isResetting={isResetting} isHovered={isHovered} onError={handleWebglError} />
-        </div>
-      ) : (
-        <CssBlackHole />
-      )}
+      <div
+        className={`blackhole blackhole-shader ${isHovered ? 'blackhole-hover' : ''}`}
+        role="button"
+        tabIndex={0}
+        aria-label="Slow down and restart black hole"
+        onMouseEnter={handleBlackholeEnter}
+        onPointerMove={handleBlackholePointerMove}
+        onPointerLeave={handleBlackholePointerLeave}
+        onClick={triggerBlackholeReset}
+        onKeyDown={handleBlackholeKeyDown}
+      >
+        <ShaderBlackHole isResetting={isResetting} isHovered={isHovered} />
+      </div>
       <header className="site-header">
         <h1 className="site-name">Matthew Isaac</h1>
         <p className="site-title">
